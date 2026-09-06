@@ -1,0 +1,11 @@
+[package]
+name = "kuvakannu"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-web = "4.15.0"
+tokio = "1.53.1"
+
+[dev-dependencies]
+reqwest = { version = "0.13.4", features = ["blocking"] }

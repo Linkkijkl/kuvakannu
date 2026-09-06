@@ -1,0 +1,8 @@
+services:
+  backend:
+    build:
+      context: .
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    env_file: devcontainer.env

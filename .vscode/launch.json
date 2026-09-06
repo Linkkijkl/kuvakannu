@@ -1,0 +1,50 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug backend",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=kattilakioski",
+                    "--package=kattilakioski"
+                ],
+                "filter": {
+                    "name": "kattilakioski",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "env": {
+                "RUST_LOG": "debug"
+            },
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug backend tests",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=kattilakioski",
+                    "--package=kattilakioski"
+                ],
+                "filter": {
+                    "name": "kattilakioski",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "--test-threads=1"
+            ],
+            "env": {
+                "RUST_LOG": "debug"
+            },
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
