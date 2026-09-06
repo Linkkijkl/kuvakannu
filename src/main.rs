@@ -1,3 +1,4 @@
+use actix_files::Files;
 use actix_web::{App, HttpServer, middleware};
 
 mod api;
@@ -14,6 +15,8 @@ async fn main() -> std::io::Result<()> {
                 .wrap(headers_middleware)
                 .wrap(logger_middleware)
                 .configure(api::config)
+                .service(Files::new("/content", "content"))
+                .service(Files::new("/", "dist").index_file("index.html"))
         })
         .bind(("0.0.0.0", 3030))?
         .run(),
