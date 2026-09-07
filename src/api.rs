@@ -1,4 +1,4 @@
-use std::{fs::FileType, path::Path};
+use std::{path::Path};
 use futures_lite::stream::StreamExt;
 
 use actix_web::{Error, HttpResponse, get, web};
@@ -26,7 +26,6 @@ struct DirectoryListing {
 
 #[get("/dir/{path:.*}")]
 pub async fn get_directory(path: web::Path<String>) -> Result<HttpResponse, Error> {
-    println!("{:?}", path);
     let directory = Path::new("content").join(path.to_string());
     let mut directories = vec![];
     let mut files = vec![];
@@ -43,12 +42,12 @@ pub async fn get_directory(path: web::Path<String>) -> Result<HttpResponse, Erro
                 let content_bytes = async_fs::read(entry.path()).await?;
                 let content = String::from_utf8(content_bytes);
                 if let Ok(content) = content {
-                    info = Some(content);
+                    info = Some(markdown::to_html(&content));
                 }
                 continue;
             }
             else if let Ok(a) = entry.file_name().into_string() {
-                files.push(a)
+                files.push(format!("/content/{a}"));
             }
         }
     }
