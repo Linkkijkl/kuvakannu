@@ -1,7 +1,7 @@
 use actix_files::Files;
 use actix_web::{App, HttpServer, middleware};
 
-mod api;
+mod page;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -14,9 +14,8 @@ async fn main() -> std::io::Result<()> {
             App::new()
                 .wrap(headers_middleware)
                 .wrap(logger_middleware)
-                .configure(api::config)
+                .configure(page::config)
                 .service(Files::new("/content", "content"))
-                .service(Files::new("/", "dist").index_file("index.html"))
         })
         .bind(("0.0.0.0", 3030))?
         .run(),

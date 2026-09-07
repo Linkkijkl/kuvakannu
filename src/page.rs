@@ -1,20 +1,13 @@
 use std::{path::Path};
 use futures_lite::stream::StreamExt;
-
 use actix_web::{Error, HttpResponse, get, web};
 use serde::Serialize;
+use sailfish::TemplateSimple;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::scope("/api/v1")
-            .service(hello_world)
-            .service(get_directory),
+        page
     );
-}
-
-#[get("/hello")]
-pub async fn hello_world() -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().body("Hello world!"))
 }
 
 #[derive(Debug, Serialize)]
@@ -24,10 +17,9 @@ struct DirectoryListing {
     directories: Vec<String>,
 }
 
-#[get("/dir/{path:.*}")]
-pub async fn get_directory(path: web::Path<String>) -> Result<HttpResponse, Error> {
-    let directory = Path::new("content").join(path.to_string());
-    let mut directories = vec![];
+async fn get_directory_listing(path: String) -> Result<DirectoryListing, Error> {
+let directory = Path::new("content").join(path);
+let mut directories = vec![];
     let mut files = vec![];
     let mut info = None;
     let mut entries = async_fs::read_dir(directory).await?;
@@ -52,11 +44,31 @@ pub async fn get_directory(path: web::Path<String>) -> Result<HttpResponse, Erro
         }
     }
 
-    Ok(HttpResponse::Ok().json(DirectoryListing {
-        info,
-        files,
+    Ok(DirectoryListing {
         directories,
-    }))
+        files,
+        info
+    })
+}
+
+#[derive(TemplateSimple)]
+#[template(path = "page.stpl")]
+struct PageTemplate {
+    info: String,
+    files: Vec<String>,
+    directories: Vec<String>,
+}
+
+#[get("/{path:.*}")]
+pub async fn page(path: web::Path<String>) -> Result<HttpResponse, Error> {
+    let listing = get_directory_listing(path.to_string()).await?;
+    let rendered_page = PageTemplate {
+        info: listing.info.unwrap_or_default(),
+        files: listing.files,
+        directories: listing.directories,
+    }.render_once().unwrap();
+
+    Ok(HttpResponse::Ok().body(rendered_page))
 }
 
 #[cfg(test)]
@@ -67,7 +79,7 @@ mod tests {
     // Test if api is available
     #[test]
     fn api_is_responsive() -> Result<()> {
-        let status = reqwest::blocking::get(format!("{URL}/api/v1/hello"))?.status();
+        let status = reqwest::blocking::get(URL)?.status();
         assert_eq!(
             status, 200,
             "Could not reach API. Make sure the backend is running and available in `{URL}` before running tests."
