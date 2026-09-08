@@ -36,8 +36,9 @@ struct ItemTemplate {
 #[get("/{path:.*}")]
 pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Error> {
     let path = &path.to_string();
-    let public_path = Path::new(path);
-    let internal_path = Path::new("content").join(public_path);
+    let path = Path::new(path);
+    let public_path = Path::new("content").join(path);
+    let internal_path = Path::new("content").join(path);
     let metadata = if let Ok(a) = async_fs::metadata(&internal_path).await {
         a
     } else {
@@ -91,8 +92,10 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                 info = Some(markdown::to_html(&content));
                 continue;
             } else if let Ok(a) = entry.file_name().into_string() {
+                let file_public_path = public_path.join(&a);
+                let file_public_path = file_public_path.to_str().unwrap_or_default();
                 let file = File {
-                    public_path: format!("/content/{a}"),
+                    public_path: String::from(file_public_path),
                     name: a,
                 };
                 files.push(file);

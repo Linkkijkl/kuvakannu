@@ -1,5 +1,8 @@
+<!DOCTYPE html>
+
 <html>
   <body>
-    <%- file.name %>
+    <h3><%= file.name %></h3>
+    <img src="<%= file.public_path %>" alt="<%= file.name %>" />
   </body>
 </html>

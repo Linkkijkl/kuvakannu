@@ -5,6 +5,8 @@ mod page;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    colog::init();
+
     let actix = tokio::task::spawn(
         HttpServer::new(|| {
             let headers_middleware =
@@ -14,8 +16,8 @@ async fn main() -> std::io::Result<()> {
             App::new()
                 .wrap(headers_middleware)
                 .wrap(logger_middleware)
+                .service(Files::new("content", "./content"))
                 .configure(page::config)
-                .service(Files::new("/content", "content"))
         })
         .bind(("0.0.0.0", 3030))?
         .run(),

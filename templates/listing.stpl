@@ -1,5 +1,21 @@
+<!DOCTYPE html>
+
 <html>
   <body>
     <%- info %>
+    <% for directory in directories { %>
+      <div class="thumbnail">
+        <a href="<%= directory.name %>">
+          <img src="<%= directory.public_path %>" alt="<%= directory.name %>"/>
+        </a>
+      </div>
+    <% } %>
+    <% for file in files { %>
+      <div class="thumbnail">
+        <a href="<%= file.name %>">
+          <img src="<%= file.public_path %>" alt="<%= file.name %>"/>
+        </a>
+      </div>
+    <% } %>
   </body>
 </html>
