@@ -2,6 +2,7 @@ use actix_files::Files;
 use actix_web::{App, HttpServer, middleware};
 
 mod page;
+mod thumbnail;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -17,6 +18,7 @@ async fn main() -> std::io::Result<()> {
                 .wrap(headers_middleware)
                 .wrap(logger_middleware)
                 .service(Files::new("content", "./content"))
+                .configure(thumbnail::config)
                 .configure(page::config)
         })
         .bind(("0.0.0.0", 3030))?
