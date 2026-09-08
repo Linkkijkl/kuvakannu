@@ -1,7 +1,10 @@
 use actix_web::{HttpResponse, get, web};
+use async_recursion::async_recursion;
 use futures_lite::stream::StreamExt;
 use sailfish::TemplateSimple;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+use crate::thumbnail::thumbnail;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(page);
@@ -18,6 +21,7 @@ struct File {
 struct Directory {
     name: String,
     public_path: String,
+    thumbnail_path: String,
 }
 
 #[derive(TemplateSimple)]
@@ -32,6 +36,26 @@ struct ListingTemplate {
 #[template(path = "item.stpl")]
 struct ItemTemplate {
     file: File,
+}
+
+#[async_recursion]
+async fn get_first_file_recursive(dir: PathBuf) -> Option<PathBuf> {
+    if let Ok(mut entries) = async_fs::read_dir(dir).await {
+        while let Some(entry) = entries.next().await {
+            if let Ok(entry) = entry
+                && let Ok(file_type) = entry.file_type().await
+            {
+                if file_type.is_dir() {
+                    if let Some(a) = get_first_file_recursive(entry.path()).await {
+                        return Some(a);
+                    }
+                } else if file_type.is_file() {
+                    return Some(entry.path());
+                }
+            }
+        }
+    }
+    None
 }
 
 #[get("/{path:.*}")]
@@ -85,9 +109,19 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             && let Ok(a) = entry.file_name().into_string()
             && let Some(dir_public_path) = public_path.join(&a).to_str()
         {
+            let thumbnail_path = get_first_file_recursive(entry.path()).await;
+            let thumbnail_path = match thumbnail_path {
+                Some(thumbnail_path) => PathBuf::from("/thumb")
+                    .join(thumbnail_path.iter().skip(1).collect::<PathBuf>())
+                    .to_str()
+                    .unwrap_or_else(|| panic!("file path is not valid utf8: {:?}", entry.path()))
+                    .to_string(),
+                None => todo!(), // No thumbnail found
+            };
             directories.push(Directory {
                 name: a,
                 public_path: String::from(dir_public_path),
+                thumbnail_path,
             });
         }
         if a.is_file() {
