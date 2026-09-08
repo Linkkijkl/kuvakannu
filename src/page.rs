@@ -1,72 +1,112 @@
-use std::{path::Path};
+use actix_web::{HttpResponse, get, web};
 use futures_lite::stream::StreamExt;
-use actix_web::{Error, HttpResponse, get, web};
-use serde::Serialize;
 use sailfish::TemplateSimple;
+use std::path::Path;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        page
-    );
+    cfg.service(page);
 }
 
-#[derive(Debug, Serialize)]
-struct DirectoryListing {
-    info: Option<String>,
-    files: Vec<String>,
-    directories: Vec<String>,
+#[derive(Debug)]
+struct File {
+    name: String,
+    public_path: String,
 }
 
-async fn get_directory_listing(path: String) -> Result<DirectoryListing, Error> {
-let directory = Path::new("content").join(path);
-let mut directories = vec![];
+#[derive(Debug)]
+struct Directory {
+    name: String,
+    public_path: String,
+}
+
+#[derive(TemplateSimple)]
+#[template(path = "listing.stpl")]
+struct ListingTemplate {
+    info: String,
+    files: Vec<File>,
+    directories: Vec<Directory>,
+}
+
+#[derive(TemplateSimple)]
+#[template(path = "item.stpl")]
+struct ItemTemplate {
+    file: File,
+}
+
+#[get("/{path:.*}")]
+pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Error> {
+    let path = &path.to_string();
+    let public_path = Path::new(path);
+    let internal_path = Path::new("content").join(public_path);
+    let metadata = if let Ok(a) = async_fs::metadata(&internal_path).await {
+        a
+    } else {
+        return Ok(HttpResponse::NotFound().body("File not found"));
+    };
+
+    // Generate a item view
+    if metadata.is_file() {
+        if let Some(file_name) = public_path.file_name()
+            && let Some(file_name) = file_name.to_str()
+            && let Some(public_path) = public_path.to_str()
+        {
+            let rendered_page = ItemTemplate {
+                file: File {
+                    name: String::from(file_name),
+                    public_path: String::from(public_path),
+                }
+            }
+            .render_once()
+            .unwrap();
+
+            return Ok(HttpResponse::Ok().body(rendered_page));
+        }
+
+        return Ok(HttpResponse::NotFound().body("File not found"));
+    }
+
+    // Generate a directory listing
+    if !metadata.is_dir() {
+        return Ok(HttpResponse::NotFound().body("File not found"));
+    }
+
+    let mut directories = vec![];
     let mut files = vec![];
     let mut info = None;
-    let mut entries = async_fs::read_dir(directory).await?;
+    let mut entries = async_fs::read_dir(internal_path).await?;
     while let Some(entry) = entries.try_next().await? {
         let a = entry.file_type().await?;
         if a.is_dir()
-            && let Ok(a) = entry.file_name().into_string() {
-                directories.push(a);
-            }
+            && let Ok(a) = entry.file_name().into_string()
+            && let Some(dir_public_path) = public_path.join(&a).to_str()
+        {
+            directories.push(Directory {
+                name: a,
+                public_path: String::from(dir_public_path),
+            });
+        }
         if a.is_file() {
             if entry.file_name() == "readme.md" {
-                let content_bytes = async_fs::read(entry.path()).await?;
-                let content = String::from_utf8(content_bytes);
-                if let Ok(content) = content {
-                    info = Some(markdown::to_html(&content));
-                }
+                let content = async_fs::read_to_string(entry.path()).await?;
+                info = Some(markdown::to_html(&content));
                 continue;
-            }
-            else if let Ok(a) = entry.file_name().into_string() {
-                files.push(format!("/content/{a}"));
+            } else if let Ok(a) = entry.file_name().into_string() {
+                let file = File {
+                    public_path: format!("/content/{a}"),
+                    name: a,
+                };
+                files.push(file);
             }
         }
     }
 
-    Ok(DirectoryListing {
-        directories,
+    let rendered_page = ListingTemplate {
+        info: info.unwrap_or_default(),
         files,
-        info
-    })
-}
-
-#[derive(TemplateSimple)]
-#[template(path = "page.stpl")]
-struct PageTemplate {
-    info: String,
-    files: Vec<String>,
-    directories: Vec<String>,
-}
-
-#[get("/{path:.*}")]
-pub async fn page(path: web::Path<String>) -> Result<HttpResponse, Error> {
-    let listing = get_directory_listing(path.to_string()).await?;
-    let rendered_page = PageTemplate {
-        info: listing.info.unwrap_or_default(),
-        files: listing.files,
-        directories: listing.directories,
-    }.render_once().unwrap();
+        directories,
+    }
+    .render_once()
+    .unwrap();
 
     Ok(HttpResponse::Ok().body(rendered_page))
 }

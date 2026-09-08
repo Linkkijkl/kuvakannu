@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 actix-files = "0.7.0"
 actix-web = "4.15.0"
+anyhow = "1.0.104"
 async-fs = "2.2.0"
 futures-lite = "2.6.1"
 markdown = "1.0.0"
