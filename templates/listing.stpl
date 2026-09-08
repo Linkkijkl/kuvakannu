@@ -13,7 +13,7 @@
     <% for file in files { %>
       <div class="thumbnail">
         <a href="<%= file.name %>">
-          <img src="<%= file.public_path %>" alt="<%= file.name %>"/>
+          <img src="<%= file.thumbnail_path %>" alt="<%= file.name %>"/>
         </a>
       </div>
     <% } %>

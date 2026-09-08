@@ -11,6 +11,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 struct File {
     name: String,
     public_path: String,
+    thumbnail_path: String,
 }
 
 #[derive(Debug)]
@@ -39,6 +40,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
     let path = Path::new(path);
     let public_path = Path::new("content").join(path);
     let internal_path = Path::new("content").join(path);
+    let thumbnail_path = Path::new("thumb").join(path);
     let metadata = if let Ok(a) = async_fs::metadata(&internal_path).await {
         a
     } else {
@@ -50,12 +52,14 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         if let Some(file_name) = public_path.file_name()
             && let Some(file_name) = file_name.to_str()
             && let Some(public_path) = public_path.to_str()
+            && let Some(thumbnail_path) = thumbnail_path.to_str()
         {
             let rendered_page = ItemTemplate {
                 file: File {
                     name: String::from(file_name),
                     public_path: String::from(public_path),
-                }
+                    thumbnail_path: String::from(thumbnail_path),
+                },
             }
             .render_once()
             .unwrap();
@@ -94,8 +98,11 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             } else if let Ok(a) = entry.file_name().into_string() {
                 let file_public_path = public_path.join(&a);
                 let file_public_path = file_public_path.to_str().unwrap_or_default();
+                let file_thumbnail_path = thumbnail_path.join(&a);
+                let file_thumbnail_path = file_thumbnail_path.to_str().unwrap_or_default();
                 let file = File {
                     public_path: String::from(file_public_path),
+                    thumbnail_path: String::from(file_thumbnail_path),
                     name: a,
                 };
                 files.push(file);
