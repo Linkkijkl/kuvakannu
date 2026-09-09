@@ -9,6 +9,7 @@ RUN USER=root cargo new --bin kuvakannu
 WORKDIR /app/kuvakannu
 COPY Cargo.lock Cargo.toml ./
 COPY src src
+COPY templates templates
 RUN cargo build --release --bin kuvakannu
 
 # Final container
