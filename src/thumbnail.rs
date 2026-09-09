@@ -1,7 +1,6 @@
 use actix_web::{HttpResponse, get, web, error};
 use image::{EncodableLayout, ImageReader, Limits};
-use std::{path::{Path, PathBuf}, thread::current};
-use futures::future::{BoxFuture, FutureExt};
+use std::path::{Path, PathBuf};
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(thumbnail);

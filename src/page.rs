@@ -4,8 +4,6 @@ use futures_lite::stream::StreamExt;
 use sailfish::TemplateSimple;
 use std::path::{Path, PathBuf};
 
-use crate::thumbnail::thumbnail;
-
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(page);
 }
@@ -14,6 +12,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 struct File {
     name: String,
     public_path: String,
+    public_content_path: String,
     thumbnail_path: String,
 }
 
@@ -62,7 +61,7 @@ async fn get_first_file_recursive(dir: PathBuf) -> Option<PathBuf> {
 pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Error> {
     let path = &path.to_string();
     let path = Path::new(path);
-    let public_path = Path::new("content").join(path);
+    let public_content_path = Path::new("content").join(path);
     let internal_path = Path::new("content").join(path);
     let thumbnail_path = Path::new("thumb").join(path);
     let metadata = if let Ok(a) = async_fs::metadata(&internal_path).await {
@@ -73,15 +72,17 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
 
     // Generate a item view
     if metadata.is_file() {
-        if let Some(file_name) = public_path.file_name()
+        if let Some(file_name) = public_content_path.file_name()
             && let Some(file_name) = file_name.to_str()
-            && let Some(public_path) = public_path.to_str()
+            && let Some(public_path) = public_content_path.to_str()
             && let Some(thumbnail_path) = thumbnail_path.to_str()
+            && let Some(path) = path.to_str()
         {
             let rendered_page = ItemTemplate {
                 file: File {
                     name: String::from(file_name),
-                    public_path: String::from(public_path),
+                    public_content_path: String::from(public_path),
+                    public_path: String::from(path),
                     thumbnail_path: String::from(thumbnail_path),
                 },
             }
@@ -107,7 +108,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         let a = entry.file_type().await?;
         if a.is_dir()
             && let Ok(a) = entry.file_name().into_string()
-            && let Some(dir_public_path) = public_path.join(&a).to_str()
+            && let Some(dir_public_path) = path.join(&a).to_str()
         {
             let thumbnail_path = get_first_file_recursive(entry.path()).await;
             let thumbnail_path = match thumbnail_path {
@@ -130,11 +131,14 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                 info = Some(markdown::to_html(&content));
                 continue;
             } else if let Ok(a) = entry.file_name().into_string() {
-                let file_public_path = public_path.join(&a);
-                let file_public_path = file_public_path.to_str().unwrap_or_default();
+                let file_public_content_path = public_content_path.join(&a);
+                let file_public_content_path = file_public_content_path.to_str().unwrap_or_default();
                 let file_thumbnail_path = thumbnail_path.join(&a);
                 let file_thumbnail_path = file_thumbnail_path.to_str().unwrap_or_default();
+                let file_public_path = entry.path();
+                let file_public_path = file_public_path.to_str().unwrap_or_default();
                 let file = File {
+                    public_content_path: String::from(file_public_content_path),
                     public_path: String::from(file_public_path),
                     thumbnail_path: String::from(file_thumbnail_path),
                     name: a,

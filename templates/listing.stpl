@@ -5,7 +5,7 @@
     <%- info %>
     <% for directory in directories { %>
       <div class="thumbnail">
-        <a href="<%= directory.name %>">
+        <a href="/<%= directory.public_path %>">
           <img src="<%= directory.thumbnail_path %>" alt="<%= directory.name %>"/>
           <p class="caption"><%= directory.name %></p> 
         </a>
@@ -13,8 +13,8 @@
     <% } %>
     <% for file in files { %>
       <div class="thumbnail">
-        <a href="<%= file.name %>">
-          <img src="<%= file.thumbnail_path %>" alt="<%= file.name %>"/>
+        <a href="/<%= file.public_path %>">
+          <img src="/<%= file.thumbnail_path %>" alt="<%= file.name %>"/>
         </a>
       </div>
     <% } %>
