@@ -4,6 +4,8 @@ use futures_lite::stream::StreamExt;
 use sailfish::TemplateSimple;
 use std::path::{Path, PathBuf};
 
+use crate::thumbnail::SUPPORTED_FILE_TYPES;
+
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(page);
 }
@@ -49,7 +51,19 @@ async fn get_first_file_recursive(dir: PathBuf) -> Option<PathBuf> {
                         return Some(a);
                     }
                 } else if file_type.is_file() {
-                    return Some(entry.path());
+                    let extension = entry
+                        .file_name()
+                        .to_str()
+                        .unwrap_or_else(|| {
+                            panic!("File name {:?} is not valid uniocode", entry.path())
+                        })
+                        .split(".")
+                        .last()
+                        .unwrap_or_default()
+                        .to_lowercase();
+                    if SUPPORTED_FILE_TYPES.contains(&extension.as_str()) {
+                        return Some(entry.path());
+                    }
                 }
             }
         }
@@ -132,7 +146,8 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                 continue;
             } else if let Ok(a) = entry.file_name().into_string() {
                 let file_public_content_path = public_content_path.join(&a);
-                let file_public_content_path = file_public_content_path.to_str().unwrap_or_default();
+                let file_public_content_path =
+                    file_public_content_path.to_str().unwrap_or_default();
                 let file_thumbnail_path = thumbnail_path.join(&a);
                 let file_thumbnail_path = file_thumbnail_path.to_str().unwrap_or_default();
                 let file_public_path = entry.path();
