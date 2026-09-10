@@ -1,4 +1,5 @@
 use actix_web::{HttpResponse, get, web};
+use async_fs::DirEntry;
 use async_recursion::async_recursion;
 use futures_lite::stream::StreamExt;
 use sailfish::TemplateSimple;
@@ -117,7 +118,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
     let mut directories = vec![];
     let mut files = vec![];
     let mut info = None;
-    let mut entries = async_fs::read_dir(internal_path).await?;
+    let mut entries = async_fs::read_dir(internal_path).await?; // TODO: Sort alphabetically
     while let Some(entry) = entries.try_next().await? {
         let a = entry.file_type().await?;
         if a.is_dir()
@@ -131,7 +132,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                     .to_str()
                     .unwrap_or_else(|| panic!("file path is not valid utf8: {:?}", entry.path()))
                     .to_string(),
-                None => todo!(), // No thumbnail found
+                None => "/nonexistent".to_string(), // TODO: No thumbnailable image found, use default directory thumbnail
             };
             directories.push(Directory {
                 name: a,
