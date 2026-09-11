@@ -1,5 +1,4 @@
 use actix_web::{HttpResponse, get, web};
-use async_fs::DirEntry;
 use async_recursion::async_recursion;
 use futures_lite::stream::StreamExt;
 use sailfish::TemplateSimple;

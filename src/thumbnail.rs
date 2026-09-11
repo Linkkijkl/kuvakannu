@@ -1,6 +1,9 @@
 use actix_web::{HttpResponse, error, get, web};
 use image::{EncodableLayout, ImageReader, Limits};
+use log::info;
 use std::path::{Path, PathBuf};
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(thumbnail);
@@ -16,25 +19,57 @@ pub async fn thumbnail(path: web::Path<String>) -> Result<HttpResponse, actix_we
     let path = &path.to_string();
     let path = Path::new(path);
     let internal_path = Path::new("content").join(path);
-    let metadata = if let Ok(a) = async_fs::metadata(&internal_path).await {
-        a
-    } else {
-        return Ok(HttpResponse::NotFound().body("File not found"));
+    if let Ok(metadata) = async_fs::metadata(&internal_path).await
+        && !metadata.is_file()
+    {
+        return Err(error::ErrorNotFound("File not found"));
     };
 
-    if metadata.is_file() {
-        let thumbnail_bytes = get_thumbnail(&internal_path)?;
+    // Try to read pre-generated thumbnail
+    let thumbnail_path = Path::new("thumbnail").join(path);
+    let thumbnail_file = match File::open(&thumbnail_path).await {
+        Ok(file) => {
+            // File exists, return file
+            file
+        }
+        Err(_) => {
+            // Thumbnail does not exist, generate it
+            let thumbnail_bytes = generate_thumbnail(&internal_path)?;
 
-        // Return thumbnail from memory
-        return Ok(HttpResponse::Ok()
-            .insert_header(("Content-type", "image/webp"))
-            .body(thumbnail_bytes));
-    }
+            let file_write_result = async {
+                let parent_dir = thumbnail_path
+                    .parent()
+                    .unwrap_or_else(|| panic!("File path has no parent dir: {:?}", thumbnail_path));
+                println!("{:?}", parent_dir);
+                if !tokio::fs::try_exists(parent_dir).await? {
+                    tokio::fs::create_dir_all(parent_dir).await?;
+                }
+                let mut file = File::create(&thumbnail_path).await?;
+                file.write_all(&thumbnail_bytes).await?;
+                Ok::<(), std::io::Error>(())
+            }
+            .await;
+            if let Err(e) = file_write_result {
+                // Thumbnail writing failed, return bytes from memory
+                info!("Error while writing thumbnail: {:?}", e);
+                return Ok(HttpResponse::Ok()
+                    .insert_header(("Content-type", "image/webp"))
+                    .body(thumbnail_bytes));
+            }
 
-    Err(error::ErrorNotFound("File not found"))
+            File::open(&thumbnail_path)
+                .await
+                .expect("Could not load thumbnail from disk that was just saved")
+        }
+    };
+
+    // Return thumbnail file stream
+    Ok(HttpResponse::Ok()
+        .insert_header(("Content-type", "image/webp"))
+        .streaming(tokio_util::io::ReaderStream::new(thumbnail_file)))
 }
 
-fn get_thumbnail(file_path: &PathBuf) -> Result<Vec<u8>, actix_web::Error> {
+fn generate_thumbnail(file_path: &PathBuf) -> Result<Vec<u8>, actix_web::Error> {
     const MAX_IMAGE_RESOLUTION: u32 = 10_000;
     const THUMBNAIL_SIZE: u32 = 500;
     const THUMBNAIL_QUALITY: f32 = 80.0;
