@@ -1,22 +1,32 @@
 <!DOCTYPE html>
 
 <html>
+  <head>
+    <% include!("./header.stpl"); %>
+  </head>
   <body>
+    <div class="top-bar">
+      <% for (name, path) in path { %>
+        <a href="<%= path %>"><%= name %></a>
+      <% } %>
+    </div>
     <%- info %>
-    <% for directory in directories { %>
-      <div class="thumbnail">
-        <a href="/<%= directory.public_path %>">
-          <img src="<%= directory.thumbnail_path %>" alt="<%= directory.name %>"/>
-          <p class="caption"><%= directory.name %></p> 
-        </a>
-      </div>
-    <% } %>
-    <% for file in files { %>
-      <div class="thumbnail">
-        <a href="/<%= file.public_path %>">
-          <img src="/<%= file.thumbnail_path %>" alt="<%= file.name %>"/>
-        </a>
-      </div>
-    <% } %>
+    <div class="listing-container">
+      <% for directory in directories { %>
+        <div class="thumbnail">
+          <a href="/<%= directory.public_path %>">
+            <img src="<%= directory.thumbnail_path %>" alt="<%= directory.name %>" loading="lazy" />
+            <p class="caption"><%= directory.name %></p> 
+          </a>
+        </div>
+      <% } %>
+      <% for file in files { %>
+        <div class="thumbnail">
+          <a href="/<%= file.public_path %>">
+            <img src="/<%= file.thumbnail_path %>" alt="<%= file.name %>" loading="lazy" />
+          </a>
+        </div>
+      <% } %>
+    </div> <!-- listing-container -->
   </body>
 </html>

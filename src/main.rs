@@ -6,6 +6,7 @@ use actix_web::{App, HttpServer, middleware};
 mod page;
 mod thumbnail;
 mod web_path;
+mod r#static;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -22,6 +23,7 @@ async fn main() -> std::io::Result<()> {
                 .wrap(logger_middleware)
                 .service(Files::new("content", "./content"))
                 .configure(thumbnail::config)
+                .configure(r#static::config)
                 .configure(page::config)
         })
         .keep_alive(Duration::from_secs(60))

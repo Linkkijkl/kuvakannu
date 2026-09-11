@@ -10,6 +10,7 @@ WORKDIR /app/kuvakannu
 COPY Cargo.lock Cargo.toml ./
 COPY src src
 COPY templates templates
+COPY static static
 RUN cargo build --release --bin kuvakannu
 
 # Final container

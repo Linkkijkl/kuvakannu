@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 
 <html>
+  <head>
+    <% include!("./header.stpl"); %>
+  </head>
   <body>
     <h3><%= file.name %></h3>
     <img src="/<%= file.public_content_path %>" alt="<%= file.name %>" />

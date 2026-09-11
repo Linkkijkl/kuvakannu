@@ -30,6 +30,7 @@ struct ListingTemplate {
     info: String,
     files: Vec<File>,
     directories: Vec<Directory>,
+    path: Vec<(String, String)>,
 }
 
 #[derive(TemplateSimple)]
@@ -165,10 +166,17 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         }
     }
 
+    let mut paths = vec![("/".to_string(), "/".to_string())];
+    for entry in request_path.iter() {
+        let next_path = format!("{}/{}", paths.last().unwrap().1, entry);
+        paths.push((next_path, entry.to_string()));
+    }
+
     let rendered_page = ListingTemplate {
         info: info.unwrap_or_default(),
         files,
         directories,
+        path: paths,
     }
     .render_once()
     .unwrap();
