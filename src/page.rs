@@ -4,7 +4,7 @@ use futures_lite::stream::StreamExt;
 use sailfish::TemplateSimple;
 use std::path::{Path, PathBuf};
 
-use crate::thumbnail::SUPPORTED_FILE_TYPES;
+use crate::{thumbnail::SUPPORTED_FILE_TYPES, web_path::WebPath};
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(page);
@@ -55,7 +55,7 @@ async fn get_first_file_recursive(dir: PathBuf) -> Option<PathBuf> {
                         .file_name()
                         .to_str()
                         .unwrap_or_else(|| {
-                            panic!("File name {:?} is not valid uniocode", entry.path())
+                            panic!("File path {:?} is not valid uniocode", entry.path())
                         })
                         .split(".")
                         .last()
@@ -73,12 +73,13 @@ async fn get_first_file_recursive(dir: PathBuf) -> Option<PathBuf> {
 
 #[get("/{path:.*}")]
 pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Error> {
-    let path = &path.to_string();
-    let path = Path::new(path);
-    let public_content_path = Path::new("content").join(path);
-    let internal_path = Path::new("content").join(path);
-    let thumbnail_path = Path::new("thumb").join(path);
-    let metadata = if let Ok(a) = async_fs::metadata(&internal_path).await {
+    let request_path = WebPath::from(path.as_str());
+    let mut public_file_path = WebPath::from("content");
+    public_file_path.extend(request_path.iter());
+    let mut public_thumbnail_path = WebPath::from("thumb");
+    public_thumbnail_path.extend(request_path.iter());
+    let internal_file_path = Path::new("content").join(request_path.to_string());
+    let metadata = if let Ok(a) = async_fs::metadata(&internal_file_path).await {
         a
     } else {
         return Ok(HttpResponse::NotFound().body("File not found"));
@@ -86,27 +87,22 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
 
     // Generate a item view
     if metadata.is_file() {
-        if let Some(file_name) = public_content_path.file_name()
-            && let Some(file_name) = file_name.to_str()
-            && let Some(public_path) = public_content_path.to_str()
-            && let Some(thumbnail_path) = thumbnail_path.to_str()
-            && let Some(path) = path.to_str()
-        {
-            let rendered_page = ItemTemplate {
-                file: File {
-                    name: String::from(file_name),
-                    public_content_path: String::from(public_path),
-                    public_path: String::from(path),
-                    thumbnail_path: String::from(thumbnail_path),
-                },
-            }
-            .render_once()
-            .unwrap();
-
-            return Ok(HttpResponse::Ok().body(rendered_page));
+        let name = request_path
+            .last()
+            .expect("request path for an existing file does not contain file name")
+            .to_string();
+        let rendered_page = ItemTemplate {
+            file: File {
+                name,
+                public_content_path: public_file_path.to_string(),
+                public_path: request_path.to_string(),
+                thumbnail_path: public_thumbnail_path.to_string(),
+            },
         }
+        .render_once()
+        .unwrap();
 
-        return Ok(HttpResponse::NotFound().body("File not found"));
+        return Ok(HttpResponse::Ok().body(rendered_page));
     }
 
     // Generate a directory listing
@@ -117,13 +113,17 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
     let mut directories = vec![];
     let mut files = vec![];
     let mut info = None;
-    let mut entries = async_fs::read_dir(internal_path).await?; // TODO: Sort alphabetically
+    let mut entries = async_fs::read_dir(internal_file_path).await?; // TODO: Sort alphabetically
     while let Some(entry) = entries.try_next().await? {
-        let a = entry.file_type().await?;
-        if a.is_dir()
-            && let Ok(a) = entry.file_name().into_string()
-            && let Some(dir_public_path) = path.join(&a).to_str()
-        {
+        let entry_type = entry.file_type().await?;
+        if entry_type.is_dir() {
+            let dir_name = entry
+                .file_name()
+                .into_string()
+                .unwrap_or_else(|_| panic!("dir path is not valid unicode: {:?}", entry.path()));
+            let mut dir_public_path = request_path.clone();
+            let dir_name_2 = dir_name.clone();
+            dir_public_path.push(&dir_name_2);
             let thumbnail_path = get_first_file_recursive(entry.path()).await;
             let thumbnail_path = match thumbnail_path {
                 Some(thumbnail_path) => PathBuf::from("/thumb")
@@ -134,32 +134,36 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                 None => "/nonexistent".to_string(), // TODO: No thumbnailable image found, use default directory thumbnail
             };
             directories.push(Directory {
-                name: a,
-                public_path: String::from(dir_public_path),
+                name: dir_name,
+                public_path: dir_public_path.to_string(),
                 thumbnail_path,
             });
         }
-        if a.is_file() {
+        if entry_type.is_file() {
+            // Render readme markdown to listing info html
             if entry.file_name() == "readme.md" {
                 let content = async_fs::read_to_string(entry.path()).await?;
                 info = Some(markdown::to_html(&content));
                 continue;
-            } else if let Ok(a) = entry.file_name().into_string() {
-                let file_public_content_path = public_content_path.join(&a);
-                let file_public_content_path =
-                    file_public_content_path.to_str().unwrap_or_default();
-                let file_thumbnail_path = thumbnail_path.join(&a);
-                let file_thumbnail_path = file_thumbnail_path.to_str().unwrap_or_default();
-                let file_public_path = entry.path();
-                let file_public_path = file_public_path.to_str().unwrap_or_default();
-                let file = File {
-                    public_content_path: String::from(file_public_content_path),
-                    public_path: String::from(file_public_path),
-                    thumbnail_path: String::from(file_thumbnail_path),
-                    name: a,
-                };
-                files.push(file);
             }
+
+            let file_entry_name = entry
+                .file_name()
+                .into_string()
+                .unwrap_or_else(|_| panic!("file name is not valid unicode: {:?}", entry.path()));
+            let mut file_public_content_path = public_file_path.clone();
+            file_public_content_path.push(&file_entry_name);
+            let mut file_thumbnail_path = public_thumbnail_path.clone();
+            file_thumbnail_path.push(&file_entry_name);
+            let mut file_public_path = request_path.clone();
+            file_public_path.push(&file_entry_name);
+            let file = File {
+                public_content_path: file_public_content_path.to_string(),
+                public_path: file_public_path.to_string(),
+                thumbnail_path: file_thumbnail_path.to_string(),
+                name: file_entry_name,
+            };
+            files.push(file);
         }
     }
 

@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use actix_files::Files;
 use actix_web::{App, HttpServer, middleware};
 
 mod page;
 mod thumbnail;
+mod web_path;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -21,6 +24,8 @@ async fn main() -> std::io::Result<()> {
                 .configure(thumbnail::config)
                 .configure(page::config)
         })
+        .keep_alive(Duration::from_secs(60))
+        .client_request_timeout(Duration::from_secs(60))
         .bind(("0.0.0.0", 3030))?
         .run(),
     );
