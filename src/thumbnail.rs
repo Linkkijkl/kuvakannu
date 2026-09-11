@@ -19,7 +19,7 @@ pub async fn thumbnail(path: web::Path<String>) -> Result<HttpResponse, actix_we
     let path = &path.to_string();
     let path = Path::new(path);
     let internal_path = Path::new("content").join(path);
-    if let Ok(metadata) = async_fs::metadata(&internal_path).await
+    if let Ok(metadata) = tokio::fs::metadata(&internal_path).await
         && !metadata.is_file()
     {
         return Err(error::ErrorNotFound("File not found"));

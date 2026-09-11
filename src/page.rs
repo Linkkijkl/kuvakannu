@@ -1,6 +1,5 @@
 use actix_web::{HttpResponse, get, web};
 use async_recursion::async_recursion;
-use futures_lite::stream::StreamExt;
 use sailfish::TemplateSimple;
 use std::path::{Path, PathBuf};
 
@@ -41,10 +40,9 @@ struct ItemTemplate {
 
 #[async_recursion]
 async fn get_first_file_recursive(dir: PathBuf) -> Option<PathBuf> {
-    if let Ok(mut entries) = async_fs::read_dir(dir).await {
-        while let Some(entry) = entries.next().await {
-            if let Ok(entry) = entry
-                && let Ok(file_type) = entry.file_type().await
+    if let Ok(mut entries) = tokio::fs::read_dir(dir).await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            if let Ok(file_type) = entry.file_type().await
             {
                 if file_type.is_dir() {
                     if let Some(a) = get_first_file_recursive(entry.path()).await {
@@ -79,7 +77,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
     let mut public_thumbnail_path = WebPath::from("thumb");
     public_thumbnail_path.extend(request_path.iter());
     let internal_file_path = Path::new("content").join(request_path.to_string());
-    let metadata = if let Ok(a) = async_fs::metadata(&internal_file_path).await {
+    let metadata = if let Ok(a) = tokio::fs::metadata(&internal_file_path).await {
         a
     } else {
         return Ok(HttpResponse::NotFound().body("File not found"));
@@ -113,8 +111,8 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
     let mut directories = vec![];
     let mut files = vec![];
     let mut info = None;
-    let mut entries = async_fs::read_dir(internal_file_path).await?; // TODO: Sort alphabetically
-    while let Some(entry) = entries.try_next().await? {
+    let mut entries = tokio::fs::read_dir(internal_file_path).await?; // TODO: Sort alphabetically
+    while let Some(entry) = entries.next_entry().await? {
         let entry_type = entry.file_type().await?;
         if entry_type.is_dir() {
             let dir_name = entry
@@ -142,7 +140,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         if entry_type.is_file() {
             // Render readme markdown to listing info html
             if entry.file_name() == "readme.md" {
-                let content = async_fs::read_to_string(entry.path()).await?;
+                let content = tokio::fs::read_to_string(entry.path()).await?;
                 info = Some(markdown::to_html(&content));
                 continue;
             }
