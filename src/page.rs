@@ -24,13 +24,18 @@ struct Directory {
     thumbnail_path: String,
 }
 
+struct Breadcrumb {
+    pub href: String,
+    pub name: String,
+}
+
 #[derive(TemplateSimple)]
 #[template(path = "listing.stpl")]
 struct ListingTemplate {
     info: String,
     files: Vec<File>,
     directories: Vec<Directory>,
-    path: Vec<(String, String)>,
+    breadcrumbs: Vec<Breadcrumb>,
 }
 
 #[derive(TemplateSimple)]
@@ -43,8 +48,7 @@ struct ItemTemplate {
 async fn get_first_file_recursive(dir: PathBuf) -> Option<PathBuf> {
     if let Ok(mut entries) = tokio::fs::read_dir(dir).await {
         while let Ok(Some(entry)) = entries.next_entry().await {
-            if let Ok(file_type) = entry.file_type().await
-            {
+            if let Ok(file_type) = entry.file_type().await {
                 if file_type.is_dir() {
                     if let Some(a) = get_first_file_recursive(entry.path()).await {
                         return Some(a);
@@ -166,17 +170,19 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         }
     }
 
-    let mut paths = vec![("/".to_string(), "/".to_string())];
+    // Construct breadcrumbs for request path
+    let mut breadcrumbs = Vec::with_capacity(request_path.len());
+    let empty = Breadcrumb{ name: String::new(), href: String::new()};
     for entry in request_path.iter() {
-        let next_path = format!("{}/{}", paths.last().unwrap().1, entry);
-        paths.push((next_path, entry.to_string()));
+        let next_path = format!("{}/{}", breadcrumbs.last().unwrap_or(&empty).href, entry);
+        breadcrumbs.push(Breadcrumb { href: next_path, name: entry.to_string() });
     }
 
     let rendered_page = ListingTemplate {
         info: info.unwrap_or_default(),
         files,
         directories,
-        path: paths,
+        breadcrumbs,
     }
     .render_once()
     .unwrap();

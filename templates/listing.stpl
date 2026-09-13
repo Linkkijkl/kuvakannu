@@ -6,8 +6,10 @@
   </head>
   <body>
     <div class="top-bar">
-      <% for (name, path) in path { %>
-        <a href="<%= path %>"><%= name %></a>
+      <a class="home" href="/">Home</a>
+      <% for breadcrumb in breadcrumbs { %>
+        <p class="breadcrumb">/</p>
+        <a class="breadcrumb" href="<%= breadcrumb.href %>"><%= breadcrumb.name %></a>
       <% } %>
     </div>
     <%- info %>
