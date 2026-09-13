@@ -172,10 +172,16 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
 
     // Construct breadcrumbs for request path
     let mut breadcrumbs = Vec::with_capacity(request_path.len());
-    let empty = Breadcrumb{ name: String::new(), href: String::new()};
+    let empty = Breadcrumb {
+        name: String::new(),
+        href: String::new(),
+    };
     for entry in request_path.iter() {
         let next_path = format!("{}/{}", breadcrumbs.last().unwrap_or(&empty).href, entry);
-        breadcrumbs.push(Breadcrumb { href: next_path, name: entry.to_string() });
+        breadcrumbs.push(Breadcrumb {
+            href: next_path,
+            name: entry.to_string(),
+        });
     }
 
     let rendered_page = ListingTemplate {

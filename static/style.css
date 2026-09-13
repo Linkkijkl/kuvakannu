@@ -35,15 +35,21 @@ time, mark, audio, video {
     font-weight: italic;
 }
 
+@view-transition {
+    navigation: auto;
+}
+
 body, html {
     margin: 0;
     padding: 0;
-    background-color: darkgrey;
+    width: 100%;
+    height: 100%;
+    background-color: #222;
     font-family: 'Scoutie Sans';
 }
 
 .listing-container {
-    width: 100vw;
+    width: 100%;
     display: flex;
     flex-wrap: wrap;
 }
@@ -69,5 +75,57 @@ body, html {
     .breadcrumb {
         min-width: 1em;
         padding-left: 1em;
+    }
+}
+
+::view-transition-old(content) {
+    animation: fade-out 0.5s cubic-bezier(0.86, 0, 0.07, 1) forwards;
+}
+
+::view-transition-new(content) {
+    animation: fade-in 0.5s cubic-bezier(0.86, 0, 0.07, 1) forwards;
+}
+
+@keyframes fade-in {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1.0);
+    }
+}
+
+@keyframes fade-out {
+    0% {
+        transform: scale(1.0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+}
+
+::view-transition-old(root) {
+    animation: none;
+}
+
+::view-transition-new(root) {
+    animation: none;
+}
+
+.view-container {
+    background-color: black;
+    min-width: 100%;
+    min-height: 100%;
+    view-transition-name: content;
+
+    img {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
     }
 }

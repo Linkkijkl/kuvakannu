@@ -5,7 +5,17 @@
     <% include!("./header.stpl"); %>
   </head>
   <body>
-    <h3><%= file.name %></h3>
-    <img src="/<%= file.public_content_path %>" alt="<%= file.name %>" />
+    <div class="view-container">
+      <img
+        class="view view-preview"
+        src="/<%= file.thumbnail_path %>"
+        alt="<%= file.name %> preview"
+      />
+      <img
+        class="view"
+        src="/<%= file.public_content_path %>"
+        alt="<%= file.name %>"
+      />
+    </div>
   </body>
 </html>
