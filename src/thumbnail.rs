@@ -34,7 +34,12 @@ pub async fn thumbnail(path: web::Path<String>) -> Result<HttpResponse, actix_we
         }
         Err(_) => {
             // Thumbnail does not exist, generate it
-            let thumbnail_bytes = generate_thumbnail(&internal_path)?;
+            let broken_file_bytes = include_str!("broken-image.svg");
+            let thumbnail_bytes = generate_thumbnail(&internal_path);
+            let thumbnail_bytes = match thumbnail_bytes {
+                Ok(a) => a,
+                Err(_) => return Ok(HttpResponse::Ok().insert_header(("Content-type", "image/svg+xml")).body(broken_file_bytes)),
+            };
 
             let file_write_result = async {
                 let parent_dir = thumbnail_path

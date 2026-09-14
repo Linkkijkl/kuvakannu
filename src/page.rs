@@ -1,7 +1,8 @@
-use actix_web::{HttpResponse, get, web};
+use actix_web::{error, HttpResponse, get, web};
 use async_recursion::async_recursion;
 use sailfish::TemplateSimple;
 use std::path::{Path, PathBuf};
+use tokio::fs::DirEntry;
 
 use crate::{thumbnail::SUPPORTED_FILE_TYPES, web_path::WebPath};
 
@@ -82,11 +83,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
     let mut public_thumbnail_path = WebPath::from("thumb");
     public_thumbnail_path.extend(request_path.iter());
     let internal_file_path = Path::new("content").join(request_path.to_string());
-    let metadata = if let Ok(a) = tokio::fs::metadata(&internal_file_path).await {
-        a
-    } else {
-        return Ok(HttpResponse::NotFound().body("File not found"));
-    };
+    let metadata = tokio::fs::metadata(&internal_file_path).await?;
 
     // Generate a item view
     if metadata.is_file() {
@@ -108,66 +105,82 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         return Ok(HttpResponse::Ok().body(rendered_page));
     }
 
-    // Generate a directory listing
+    // Return error if the request path does not match any file or directory in filesystem
     if !metadata.is_dir() {
-        return Ok(HttpResponse::NotFound().body("File not found"));
+        return Err(error::ErrorNotFound("File not found"));
     }
 
+    // Get and sort directory listing
+    let mut file_entries: Vec<DirEntry> = vec![];
+    let mut dir_entries: Vec<DirEntry> = vec![];
+    let mut fs_entry_stream = tokio::fs::read_dir(internal_file_path).await?;
+    while let Some(entry) = fs_entry_stream.next_entry().await? {
+        let entry_type = entry.file_type().await?;
+        if entry_type.is_file() {
+            file_entries.push(entry);
+        }
+        else if entry_type.is_dir() {
+            dir_entries.push(entry);
+        }
+    }
+    file_entries.sort_unstable_by_key(|a| a.file_name().to_ascii_lowercase());
+    dir_entries.sort_unstable_by_key(|a| a.file_name().to_ascii_lowercase());
+
+    // Construct Directory objects from listing directories
     let mut directories = vec![];
+    for entry in dir_entries {
+        let dir_name = entry
+            .file_name()
+            .into_string()
+            .unwrap_or_else(|_| panic!("dir path is not valid unicode: {:?}", entry.path()));
+        let mut dir_public_path = request_path.clone();
+        let dir_name_2 = dir_name.clone();
+        dir_public_path.push(&dir_name_2);
+        let thumbnail_path = get_first_file_recursive(entry.path()).await;
+        let thumbnail_path = match thumbnail_path {
+            Some(thumbnail_path) => PathBuf::from("/thumb")
+                .join(thumbnail_path.iter().skip(1).collect::<PathBuf>())
+                .to_str()
+                .unwrap_or_else(|| panic!("file path is not valid utf8: {:?}", entry.path()))
+                .to_string(),
+            None => "/static/material/folder.svg".to_string(),
+        };
+        directories.push(Directory {
+            name: dir_name,
+            public_path: dir_public_path.to_string(),
+            thumbnail_path,
+        });
+    }
+
+    // Construct File types and info from listing files
     let mut files = vec![];
     let mut info = None;
-    let mut entries = tokio::fs::read_dir(internal_file_path).await?; // TODO: Sort alphabetically
-    while let Some(entry) = entries.next_entry().await? {
-        let entry_type = entry.file_type().await?;
-        if entry_type.is_dir() {
-            let dir_name = entry
-                .file_name()
-                .into_string()
-                .unwrap_or_else(|_| panic!("dir path is not valid unicode: {:?}", entry.path()));
-            let mut dir_public_path = request_path.clone();
-            let dir_name_2 = dir_name.clone();
-            dir_public_path.push(&dir_name_2);
-            let thumbnail_path = get_first_file_recursive(entry.path()).await;
-            let thumbnail_path = match thumbnail_path {
-                Some(thumbnail_path) => PathBuf::from("/thumb")
-                    .join(thumbnail_path.iter().skip(1).collect::<PathBuf>())
-                    .to_str()
-                    .unwrap_or_else(|| panic!("file path is not valid utf8: {:?}", entry.path()))
-                    .to_string(),
-                None => "/nonexistent".to_string(), // TODO: No thumbnailable image found, use default directory thumbnail
-            };
-            directories.push(Directory {
-                name: dir_name,
-                public_path: dir_public_path.to_string(),
-                thumbnail_path,
-            });
+    for entry in file_entries {
+        // Render readme markdown to listing info html
+        if entry.file_name() == "readme.md" {
+            let content = tokio::fs::read_to_string(entry.path()).await?;
+            info = Some(markdown::to_html(&content));
+            continue;
         }
-        if entry_type.is_file() {
-            // Render readme markdown to listing info html
-            if entry.file_name() == "readme.md" {
-                let content = tokio::fs::read_to_string(entry.path()).await?;
-                info = Some(markdown::to_html(&content));
-                continue;
-            }
 
-            let file_entry_name = entry
-                .file_name()
-                .into_string()
-                .unwrap_or_else(|_| panic!("file name is not valid unicode: {:?}", entry.path()));
-            let mut file_public_content_path = public_file_path.clone();
-            file_public_content_path.push(&file_entry_name);
-            let mut file_thumbnail_path = public_thumbnail_path.clone();
-            file_thumbnail_path.push(&file_entry_name);
-            let mut file_public_path = request_path.clone();
-            file_public_path.push(&file_entry_name);
-            let file = File {
-                public_content_path: file_public_content_path.to_string(),
-                public_path: file_public_path.to_string(),
-                thumbnail_path: file_thumbnail_path.to_string(),
-                name: file_entry_name,
-            };
-            files.push(file);
-        }
+        // Cosntruct File
+        let file_entry_name = entry
+            .file_name()
+            .into_string()
+            .unwrap_or_else(|_| panic!("file name is not valid unicode: {:?}", entry.path()));
+        let mut file_public_content_path = public_file_path.clone();
+        file_public_content_path.push(&file_entry_name);
+        let mut file_thumbnail_path = public_thumbnail_path.clone();
+        file_thumbnail_path.push(&file_entry_name);
+        let mut file_public_path = request_path.clone();
+        file_public_path.push(&file_entry_name);
+        let file = File {
+            public_content_path: file_public_content_path.to_string(),
+            public_path: file_public_path.to_string(),
+            thumbnail_path: file_thumbnail_path.to_string(),
+            name: file_entry_name,
+        };
+        files.push(file);
     }
 
     // Construct breadcrumbs for request path
@@ -184,6 +197,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         });
     }
 
+    // Render page
     let rendered_page = ListingTemplate {
         info: info.unwrap_or_default(),
         files,
