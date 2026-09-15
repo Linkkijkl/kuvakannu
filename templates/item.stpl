@@ -3,6 +3,17 @@
 <html>
   <head>
     <% include!("./header.stpl"); %>
+    <% if !file.prev_path.is_empty() { %>
+      <link
+        rel="prerender"
+        href="/<%= file.prev_path %>"
+      >
+    <% } if !file.next_path.is_empty() { %>
+      <link
+        rel="prerender"
+        href="/<%= file.next_path %>"
+      >
+    <% } %>
   </head>
   <body>
     <div class="view-container">
