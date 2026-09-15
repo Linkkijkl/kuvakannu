@@ -19,6 +19,8 @@ struct File {
     next_path: String,
     prev_path: String,
     parent_path: String,
+    next_thumb_path: String,
+    prev_thumb_path: String,
 }
 
 #[derive(Debug)]
@@ -111,6 +113,8 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         // Find previous and next entries
         let mut next_path = "".to_string();
         let mut prev_path = "".to_string();
+        let mut next_thumb_path = "".to_string();
+        let mut prev_thumb_path = "".to_string();
         let i = file_entries
             .binary_search_by_key(&internal_file_path, |entry| entry.path())
             .expect("file could not be found from its containing directory");
@@ -120,9 +124,12 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                 .to_str()
                 .unwrap_or_else(|| panic!("file name is not valid utf8"))
                 .to_string();
-            let mut previous_public_path = parent_path.clone();
-            previous_public_path.push(&file_name);
-            prev_path = previous_public_path.to_string();
+            let mut prev_public_path = parent_path.clone();
+            prev_public_path.push(&file_name);
+            prev_path = prev_public_path.to_string();
+            let mut prev_public_thumb_path = WebPath::from("thumb");
+            prev_public_thumb_path.append(&mut prev_public_path.parts);
+            prev_thumb_path = prev_public_thumb_path.to_string();
         }
         if i < file_entries.len() - 1 {
             let file_name = file_entries[i + 1]
@@ -133,7 +140,13 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             let mut next_public_path = parent_path.clone();
             next_public_path.push(&file_name);
             next_path = next_public_path.to_string();
+            let mut next_public_thumb_path = WebPath::from("thumb");
+            next_public_thumb_path.append(&mut next_public_path.parts);
+            next_thumb_path = next_public_thumb_path.to_string();
         }
+
+        // Find next and previous ASDFASDF
+        
 
         let rendered_page = ItemTemplate {
             file: File {
@@ -144,6 +157,8 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                 next_path,
                 prev_path,
                 parent_path: parent_path.to_string(),
+                next_thumb_path,
+                prev_thumb_path,
             },
         }
         .render_once()
@@ -225,9 +240,13 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             public_path: file_public_path.to_string(),
             thumbnail_path: file_thumbnail_path.to_string(),
             name: file_entry_name,
+            // Lots of File fields are not required in rendering listings
+            // TODO: Fix this somehow :)
             next_path: "".to_string(),
             prev_path: "".to_string(),
             parent_path: "".to_string(),
+            next_thumb_path: "".to_string(),
+            prev_thumb_path: "".to_string(),
         };
         files.push(file);
     }

@@ -1,7 +1,7 @@
 use std::{fmt::{self, Display}, ops::{Deref, DerefMut}};
 
 pub struct WebPath<'a> {
-    parts: Vec<&'a str>,
+    pub parts: Vec<&'a str>,
 }
 
 impl<'a> WebPath<'a> {

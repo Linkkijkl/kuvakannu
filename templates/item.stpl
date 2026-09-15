@@ -3,15 +3,26 @@
 <html>
   <head>
     <% include!("./header.stpl"); %>
+    <!-- Preload previous and next resources -->
     <% if !file.prev_path.is_empty() { %>
       <link
-        rel="prerender"
+        rel="prefetch"
         href="/<%= file.prev_path %>"
       >
     <% } if !file.next_path.is_empty() { %>
       <link
-        rel="prerender"
+        rel="prefetch"
         href="/<%= file.next_path %>"
+      >
+    <% } if !file.prev_thumb_path.is_empty() { %>
+      <link
+        rel="prefetch"
+        href="/<%= file.prev_thumb_path %>"
+      >
+    <% } if !file.next_thumb_path.is_empty() { %>
+      <link
+        rel="prefetch"
+        href="/<%= file.next_thumb_path %>"
       >
     <% } %>
   </head>
