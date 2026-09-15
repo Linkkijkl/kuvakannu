@@ -52,7 +52,8 @@ function fullscreen() {
             fullscreenIcon.src = "/static/material/fullscreen-exit.svg";
         }
     });
-    topControls.insertBefore(fullscreenButton, topControls.firstChild);
+    const backButton = topControls.querySelector(".back-button");
+    topControls.insertBefore(fullscreenButton, backButton);
 }
 
 function leftRightRebind() {

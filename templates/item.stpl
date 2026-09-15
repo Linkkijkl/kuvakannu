@@ -3,7 +3,7 @@
 <html>
   <head>
     <% include!("./header.stpl"); %>
-    <!-- Preload previous and next resources -->
+    <!-- Preload previous and next listing resources -->
     <% if !file.prev_path.is_empty() { %>
       <link
         rel="prefetch"
@@ -30,6 +30,13 @@
     <div class="view-container">
       <div class="controls">
         <div class="top-controls">
+          <a 
+            class="icon-button download-button"
+            href="/<%= file.public_content_path %>"
+            download
+          >
+            <img src="/static/material/download.svg" alt="download file" />
+          </a>
           <a
             class="icon-button back-button"
             href="/<%= file.parent_path %>"
