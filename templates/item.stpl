@@ -20,7 +20,7 @@
       <div class="controls">
         <div class="top-controls">
           <a
-            class="icon-button"
+            class="icon-button back-button"
             href="/<%= file.parent_path %>"
           >
             <img src="/static/material/close.svg" alt="back to directory" />
