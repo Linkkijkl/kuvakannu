@@ -4,6 +4,17 @@ pub struct WebPath<'a> {
     parts: Vec<&'a str>,
 }
 
+impl<'a> WebPath<'a> {
+    pub fn parent(&self) -> WebPath<'_> {
+        let mut copy = self.clone();
+        let length = copy.len();
+        if length > 0 {
+            copy.remove(length - 1);
+        }
+        copy
+    }
+}
+
 impl<'a> From<&'a str> for WebPath<'a> {
     fn from(string: &'a str) -> Self {
         let parts = string

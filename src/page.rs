@@ -1,4 +1,4 @@
-use actix_web::{error, HttpResponse, get, web};
+use actix_web::{HttpResponse, error, get, web};
 use async_recursion::async_recursion;
 use sailfish::TemplateSimple;
 use std::path::{Path, PathBuf};
@@ -16,6 +16,8 @@ struct File {
     public_path: String,
     public_content_path: String,
     thumbnail_path: String,
+    next_path: String,
+    prev_path: String,
 }
 
 #[derive(Debug)]
@@ -85,18 +87,61 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
     let internal_file_path = Path::new("content").join(request_path.to_string());
     let metadata = tokio::fs::metadata(&internal_file_path).await?;
 
-    // Generate a item view
+    // Generate an item view
     if metadata.is_file() {
         let name = request_path
             .last()
             .expect("request path for an existing file does not contain file name")
             .to_string();
+
+        // Determine file neighbours
+        let parent_path = request_path.parent();
+        let internal_parent_path = Path::new("content").join(parent_path.to_string());
+        let mut file_entries: Vec<DirEntry> = vec![];
+        let mut fs_entry_stream = tokio::fs::read_dir(internal_parent_path).await?;
+        while let Some(entry) = fs_entry_stream.next_entry().await? {
+            let entry_type = entry.file_type().await?;
+            if entry_type.is_file() {
+                file_entries.push(entry);
+            }
+        }
+        file_entries.sort_unstable_by_key(|a| a.path());
+
+        // Find previous and next entries
+        let mut next_path = "".to_string();
+        let mut prev_path = "".to_string();
+        let i = file_entries
+            .binary_search_by_key(&internal_file_path, |entry| entry.path())
+            .expect("file could not be found from its containing directory");
+        if i > 0 {
+            let file_name = file_entries[i - 1]
+                .file_name()
+                .to_str()
+                .unwrap_or_else(|| panic!("file name is not valid utf8"))
+                .to_string();
+            let mut previous_public_path = parent_path.clone();
+            previous_public_path.push(&file_name);
+            prev_path = previous_public_path.to_string();
+        }
+        if i < file_entries.len() - 1 {
+            let file_name = file_entries[i + 1]
+                .file_name()
+                .to_str()
+                .unwrap_or_else(|| panic!("file name is not valid utf8"))
+                .to_string();
+            let mut next_public_path = parent_path.clone();
+            next_public_path.push(&file_name);
+            next_path = next_public_path.to_string();
+        }
+
         let rendered_page = ItemTemplate {
             file: File {
                 name,
                 public_content_path: public_file_path.to_string(),
                 public_path: request_path.to_string(),
                 thumbnail_path: public_thumbnail_path.to_string(),
+                next_path,
+                prev_path,
             },
         }
         .render_once()
@@ -118,8 +163,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         let entry_type = entry.file_type().await?;
         if entry_type.is_file() {
             file_entries.push(entry);
-        }
-        else if entry_type.is_dir() {
+        } else if entry_type.is_dir() {
             dir_entries.push(entry);
         }
     }
@@ -179,6 +223,8 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             public_path: file_public_path.to_string(),
             thumbnail_path: file_thumbnail_path.to_string(),
             name: file_entry_name,
+            next_path: "".to_string(),
+            prev_path: "".to_string(),
         };
         files.push(file);
     }

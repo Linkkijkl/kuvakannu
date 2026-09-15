@@ -16,6 +16,11 @@
         src="/<%= file.public_content_path %>"
         alt="<%= file.name %>"
       />
+      <% if !file.prev_path.is_empty() { %>
+        <a href="/<%= file.prev_path %>">previous</a>
+      <% } if !file.next_path.is_empty() { %>
+        <a href="/<%= file.next_path %>">next</a>
+      <% } %>
     </div>
   </body>
 </html>
