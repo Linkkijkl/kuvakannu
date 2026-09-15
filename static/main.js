@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", itemViewInit);
 function itemViewInit() {
     fullscreen();
     leftRightRebind();
+    backRebind();
 }
 
 function fullscreen() {
@@ -80,4 +81,14 @@ function leftRightRebind() {
             arrowClick(next);
         });
     }
+}
+
+function backRebind() {
+    const backButton = document.querySelector(".back-button");
+    if (backButton) backButton.addEventListener("click", (e) => {
+        if (window.history.length > 1) {
+            e.preventDefault();
+            window.history.back();
+        }
+    });
 }
