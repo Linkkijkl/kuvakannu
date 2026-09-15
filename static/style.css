@@ -1,19 +1,7 @@
-/* HTML reset */
-/* http://meyerweb.com/eric/tools/css/reset/
-   v2.0 | 20110126
-   License: none (public domain)
-*/
-
-
 @font-face {
     font-family: 'Scoutie Sans';
-    src: url(ScoutieSans-VariableFont_wght.ttf);
-}
-
-@font-face {
-    font-family: 'Scoutie Sans';
-    src: url(ScoutieSans-VariableFont_wght.ttf);
-    font-weight: italic;
+    src: url(ScoutieSans.woff2);
+    font-style: normal;
 }
 
 @view-transition {
