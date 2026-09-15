@@ -7,7 +7,7 @@ Only use JS when nothing else will make the desired functionality happen.
 
 */
 
-const click_element = (element_selector) => {
+const clickElement = (element_selector) => {
     let elem = document.querySelector(element_selector);
     if (elem) elem.click();
 };
@@ -16,13 +16,67 @@ const click_element = (element_selector) => {
 document.addEventListener("keydown", (event) => {
     switch (event.key) {
         case "ArrowLeft":
-            click_element(".prev-button");
+            clickElement(".prev-button");
             break;
         case "ArrowRight":
-            click_element(".next-button");
+            clickElement(".next-button");
             break;
         case "Escape":
-            click_element(".back-button");
+            clickElement(".back-button");
             break;
     }
 });
+
+document.addEventListener("DOMContentLoaded", itemViewInit);
+
+function itemViewInit() {
+    fullscreen();
+    leftRightRebind();
+}
+
+function fullscreen() {
+    const topControls = document.querySelector(".top-controls");
+    if (!topControls) return;
+    const fullscreenButton = document.createElement("a");
+    fullscreenButton.classList.add("icon-button");
+    const fullscreenIcon = document.createElement("img");
+    fullscreenIcon.src = "/static/material/fullscreen.svg";
+    fullscreenIcon.alt = "Toggle fullscreen";
+    fullscreenButton.appendChild(fullscreenIcon);
+    fullscreenButton.addEventListener("click", () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+            fullscreenIcon.src = "/static/material/fullscreen.svg";
+        } else {
+            document.body.requestFullscreen();
+            fullscreenIcon.src = "/static/material/fullscreen-exit.svg";
+        }
+    });
+    topControls.insertBefore(fullscreenButton, topControls.firstChild);
+}
+
+function leftRightRebind() {
+    const parser = new DOMParser;
+    const arrowClick = async (elem) => {
+        const response = await fetch(elem.href);
+        const result = await response.text();
+        const parsed = parser.parseFromString(result, "text/html");
+        document.querySelector(".view-container").replaceWith(parsed.querySelector(".view-container"));
+        itemViewInit();
+        window.history.replaceState(null, parsed.head.title, elem.href);
+    };
+    const prev = document.querySelector(".prev-button");
+    if (prev) {
+        prev.addEventListener("click", (e) => {
+            e.preventDefault();
+            arrowClick(prev);
+        });
+    }
+    const next = document.querySelector(".next-button");
+    if (next) {
+        next.addEventListener("click", (e) => {
+            e.preventDefault();
+            arrowClick(next);
+        });
+    }
+}
