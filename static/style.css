@@ -4,25 +4,6 @@
    License: none (public domain)
 */
 
-html, body, div, span, applet, object, iframe,
-h1, h2, h3, h4, h5, h6, p, blockquote, pre,
-a, abbr, acronym, address, big, cite, code,
-del, dfn, em, img, ins, kbd, q, s, samp,
-small, strike, strong, sub, sup, tt, var,
-b, u, i, center,
-dl, dt, dd, ol, ul, li,
-fieldset, form, label, legend,
-table, caption, tbody, tfoot, thead, tr, th, td,
-article, aside, canvas, details, embed,
-figure, figcaption, footer, header, hgroup,
-menu, nav, output, ruby, section, summary,
-time, mark, audio, video {
-    margin: 0;
-    padding: 0;
-    border: 0 none;
-    font: inherit;
-    vertical-align: baseline;
-}
 
 @font-face {
     font-family: 'Scoutie Sans';
@@ -48,9 +29,23 @@ body, html {
     font-family: 'Scoutie Sans';
 }
 
+h1, h2, h3, h4, h5, h6, p {
+    color: #ddd;
+    margin: 10px;
+}
+
 p {
-    color: #aaa;
-    margin: 5px;
+    font-size: 24px;
+    line-height: 1.2em;
+    padding-top: 0.8em;
+}
+
+h1 {
+    font-size: 42px;
+}
+
+a {
+    color: #34a0ff;
 }
 
 .listing-container {
@@ -76,11 +71,18 @@ p {
     flex-wrap: wrap;
     height: 60px;
     font-size: 2em;
+    * {
+        padding: 0;
+    }
+    p {
+        margin-left: 0.5em;
+        margin-right: 0.5em;
+    }
 }
 
 .breadcrumb {
     min-width: 1em;
-    padding-left: 1em;
+    text-align: center;
 }
 
 ::view-transition-old(content) {
@@ -167,6 +169,8 @@ p {
         p {
             font-size: 32px;
             color: #444;
+            padding: 0;
+            margin-top: 0;
         }
     }
 }
@@ -185,11 +189,23 @@ p {
     }
 }
 
-.arrow {
+.next-button,
+.prev-button {
     width: 100px;
     height: 100px;
 }
 
 .icon-button:hover {
     filter: brightness(5);
+}
+
+.dir-info-container {
+    padding: 1em;
+}
+
+.dir-info {
+    padding: 1em;
+    border-style: solid;
+    border-color: #888;
+    border-radius: 10px;
 }

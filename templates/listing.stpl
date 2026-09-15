@@ -12,7 +12,13 @@
         <a class="breadcrumb" href="<%= breadcrumb.href %>"><%= breadcrumb.name %></a>
       <% } %>
     </div>
-    <%- info %>
+    <% if !info.is_empty() { %>
+      <div class="dir-info-container">
+        <div class="dir-info">
+          <%- info %>
+        </div>
+      </div>
+    <% } %>
     <div class="listing-container">
       <% for directory in directories { %>
         <div class="listing-thumbnail">
