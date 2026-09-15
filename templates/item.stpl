@@ -6,6 +6,38 @@
   </head>
   <body>
     <div class="view-container">
+      <div class="controls">
+        <div class="top-controls">
+          <a
+            class="icon-button"
+            href="/<%= file.parent_path %>"
+          >
+            <img src="/static/material/close.svg" alt="back to directory" />
+          </a>
+        </div> <!-- top-controls -->
+        <div class="arrows">
+          <% if !file.prev_path.is_empty() { %>
+            <a
+              class="icon-button prev-button"
+              href="/<%= file.prev_path %>"
+            >
+              <img src="/static/material/chevron-backward.svg" alt="previous image" />
+            </a>
+          <% } else { %>
+            <div></div>
+          <% } if !file.next_path.is_empty() { %>
+            <a
+              class="icon-button next-button"
+              href="/<%= file.next_path %>"
+            >
+              <img src="/static/material/chevron-forward.svg" alt="next image" />
+            </a>
+          <% } %>
+        </div> <!-- arrows-->
+        <div class="bottom-controls">
+          <p><%= file.name %></p>
+        </div> <!-- bottom-controls -->
+      </div> <!-- controls -->
       <img
         class="view view-preview"
         src="/<%= file.thumbnail_path %>"
@@ -16,11 +48,6 @@
         src="/<%= file.public_content_path %>"
         alt="<%= file.name %>"
       />
-      <% if !file.prev_path.is_empty() { %>
-        <a href="/<%= file.prev_path %>">previous</a>
-      <% } if !file.next_path.is_empty() { %>
-        <a href="/<%= file.next_path %>">next</a>
-      <% } %>
     </div>
   </body>
 </html>

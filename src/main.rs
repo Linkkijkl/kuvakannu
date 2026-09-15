@@ -28,7 +28,7 @@ async fn main() -> std::io::Result<()> {
                     async {
                         let mut res = fut.await?;
                         res.headers_mut()
-                            .insert(CACHE_CONTROL, HeaderValue::from_static("max-age=86400"));
+                            .insert(CACHE_CONTROL, HeaderValue::from_static("max-age=3600"));
                         Ok(res)
                     }
                 })

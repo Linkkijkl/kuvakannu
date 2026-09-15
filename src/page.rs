@@ -18,6 +18,7 @@ struct File {
     thumbnail_path: String,
     next_path: String,
     prev_path: String,
+    parent_path: String,
 }
 
 #[derive(Debug)]
@@ -142,6 +143,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                 thumbnail_path: public_thumbnail_path.to_string(),
                 next_path,
                 prev_path,
+                parent_path: parent_path.to_string(),
             },
         }
         .render_once()
@@ -225,6 +227,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             name: file_entry_name,
             next_path: "".to_string(),
             prev_path: "".to_string(),
+            parent_path: "".to_string(),
         };
         files.push(file);
     }
