@@ -22,6 +22,9 @@
         </div>
       </div>
     <% } %>
+    <% if files.is_empty() && directories.is_empty() { %>
+      <p class="dir-empty"><strong>Nothing here :c</strong></p>
+    <% } %>
     <div class="listing-container">
       <% for directory in directories { %>
         <a class="listing-thumbnail" href="/<%= directory.public_path %>">
