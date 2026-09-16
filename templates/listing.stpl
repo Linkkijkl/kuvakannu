@@ -3,6 +3,7 @@
 <html>
   <head>
     <% include!("./header.stpl"); %>
+    <!-- TODO: Add title -->
   </head>
   <body>
     <div class="top-bar">
@@ -10,10 +11,12 @@
         <img class="logo" src="/static/logo.svg" alt="gallery logo" />
       </a>
       <a class="home" href="/">Linkin kuvagalleria</a>
-      <% for breadcrumb in breadcrumbs { %>
-        <p class="breadcrumb">/</p>
-        <a class="breadcrumb" href="<%= breadcrumb.href %>"><%= breadcrumb.name %></a>
-      <% } %>
+      <div class="bradcrumbs">
+        <% for breadcrumb in breadcrumbs { %>
+          <p class="breadcrumb">/</p>
+          <a class="breadcrumb" href="<%= breadcrumb.href %>"><%= breadcrumb.name %></a>
+        <% } %>
+      </div>
     </div>
     <% if !info.is_empty() { %>
       <div class="dir-info-container">

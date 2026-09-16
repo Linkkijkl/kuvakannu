@@ -25,6 +25,7 @@
         href="/<%= file.next_thumb_path %>"
       >
     <% } %>
+    <!-- TODO: Add title -->>
   </head>
   <body>
     <div class="view-container">

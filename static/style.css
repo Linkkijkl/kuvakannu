@@ -154,10 +154,19 @@ a {
     padding-left: 0.5em;
 }
 
+.breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    flex-grow: 1;
+    align-items: center;
+}
+
 .breadcrumb {
     min-width: 1em;
     text-align: center;
     text-decoration: none;
+    display: inline-block;
 }
 
 ::view-transition-old(content) {
