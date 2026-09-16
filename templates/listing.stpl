@@ -21,19 +21,16 @@
     <% } %>
     <div class="listing-container">
       <% for directory in directories { %>
-        <div class="listing-thumbnail">
-          <a href="/<%= directory.public_path %>">
-            <img src="<%= directory.thumbnail_path %>" alt="<%= directory.name %>" loading="lazy" />
-            <p class="caption"><%= directory.name %></p> 
-          </a>
-        </div>
+        <a class="listing-thumbnail" href="/<%= directory.public_path %>">
+          <img src="<%= directory.thumbnail_path %>" alt="<%= directory.name %>" loading="lazy" />
+          <p class="caption"><%= directory.name %></p>
+        </a>
       <% } %>
       <% for file in files { %>
-        <div class="listing-thumbnail">
-          <a href="/<%= file.public_path %>">
-            <img src="/<%= file.thumbnail_path %>" alt="<%= file.name %>" loading="lazy" />
-          </a>
-        </div>
+        <a class="listing-thumbnail" href="/<%= file.public_path %>">
+          <img src="/<%= file.thumbnail_path %>" alt="<%= file.name %>" loading="lazy" />
+          <p class="caption caption-hidden"><%= file.name %></p>
+        </a>
       <% } %>
     </div> <!-- listing-container -->
   </body>
