@@ -6,7 +6,10 @@
   </head>
   <body>
     <div class="top-bar">
-      <a class="home" href="/">Home</a>
+      <a href="/">
+        <img class="logo" src="/static/logo.svg" alt="gallery logo" />
+      </a>
+      <a class="home" href="/">Linkin kuvagalleria</a>
       <% for breadcrumb in breadcrumbs { %>
         <p class="breadcrumb">/</p>
         <a class="breadcrumb" href="<%= breadcrumb.href %>"><%= breadcrumb.name %></a>
