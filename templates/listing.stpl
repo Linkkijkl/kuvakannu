@@ -3,7 +3,7 @@
 <html>
   <head>
     <% include!("./header.stpl"); %>
-    <!-- TODO: Add title -->
+    <title>Linkin galleria - <%= name %></title>
   </head>
   <body>
     <div class="top-bar">

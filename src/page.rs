@@ -45,6 +45,7 @@ struct ListingTemplate {
     directories: Vec<Directory>,
     breadcrumbs: Vec<Breadcrumb>,
     compile_time: u64,
+    name: String,
 }
 
 #[derive(TemplateSimple)]
@@ -267,6 +268,9 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         });
     }
 
+    // Get directory name
+    let name = request_path.last().unwrap_or(&"Home").to_string();
+
     // Render page
     let rendered_page = ListingTemplate {
         info: info.unwrap_or_default(),
@@ -274,6 +278,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         directories,
         breadcrumbs,
         compile_time: COMPILE_EPOCH,
+        name,
     }
     .render_once()
     .unwrap();

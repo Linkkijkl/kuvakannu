@@ -25,7 +25,7 @@
         href="/<%= file.next_thumb_path %>"
       >
     <% } %>
-    <!-- TODO: Add title -->>
+    <title>Linkin galleria - <%= file.name %></title>
   </head>
   <body>
     <div class="view-container">
