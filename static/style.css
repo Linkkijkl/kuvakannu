@@ -8,6 +8,34 @@
     navigation: auto;
 }
 
+:root {
+    --items-per-row: 8;
+}
+
+@media screen and (max-width: 1400px) {
+    :root {
+        --items-per-row: 6;
+    }
+}
+
+@media screen and (max-width: 992px) {
+    :root {
+        --items-per-row: 4;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    :root {
+        --items-per-row: 2;
+    }
+}
+
+@media screen and (max-width: 576px) {
+    :root {
+        --items-per-row: 2;
+    }
+}
+
 body, html {
     margin: 0;
     padding: 0;
@@ -23,13 +51,13 @@ h1, h2, h3, h4, h5, h6, p {
 }
 
 p {
-    font-size: 24px;
+    font-size: 20px;
     line-height: 1.2em;
     padding-top: 0.8em;
 }
 
 h1 {
-    font-size: 42px;
+    font-size: 36px;
 }
 
 a {
@@ -43,8 +71,8 @@ a {
 }
 
 .listing-thumbnail {
-    width: 20vw;
-    height: 20vw;
+    width: calc(100vw / var(--items-per-row));
+    height: calc(100vw / var(--items-per-row));
     overflow: hidden;
     position: relative;
     transform: scale(0.98);
@@ -92,7 +120,7 @@ a {
     display: flex;
     flex-wrap: wrap;
     height: 60px;
-    font-size: 2em;
+    font-size: 1.5em;
     * {
         padding: 0;
     }
