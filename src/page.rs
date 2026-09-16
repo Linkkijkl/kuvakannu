@@ -146,7 +146,6 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         }
 
         // Find next and previous ASDFASDF
-        
 
         let rendered_page = ItemTemplate {
             file: File {
@@ -217,18 +216,18 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
     let mut files = vec![];
     let mut info = None;
     for entry in file_entries {
-        // Render readme markdown to listing info html
-        if entry.file_name() == "readme.md" {
+        // Render markdown to listing info html
+        let file_entry_name = entry
+            .file_name()
+            .into_string()
+            .unwrap_or_else(|_| panic!("file name is not valid unicode: {:?}", entry.path()));
+        if file_entry_name.ends_with(".md") {
             let content = tokio::fs::read_to_string(entry.path()).await?;
             info = Some(markdown::to_html(&content));
             continue;
         }
 
         // Cosntruct File
-        let file_entry_name = entry
-            .file_name()
-            .into_string()
-            .unwrap_or_else(|_| panic!("file name is not valid unicode: {:?}", entry.path()));
         let mut file_public_content_path = public_file_path.clone();
         file_public_content_path.push(&file_entry_name);
         let mut file_thumbnail_path = public_thumbnail_path.clone();
