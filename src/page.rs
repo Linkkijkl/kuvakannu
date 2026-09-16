@@ -10,6 +10,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(page);
 }
 
+const COMPILE_EPOCH: u64 = compile_time::unix!();
+
 #[derive(Debug)]
 struct File {
     name: String,
@@ -42,12 +44,14 @@ struct ListingTemplate {
     files: Vec<File>,
     directories: Vec<Directory>,
     breadcrumbs: Vec<Breadcrumb>,
+    compile_time: u64,
 }
 
 #[derive(TemplateSimple)]
 #[template(path = "item.stpl")]
 struct ItemTemplate {
     file: File,
+    compile_time: u64,
 }
 
 #[async_recursion]
@@ -145,8 +149,6 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             next_thumb_path = next_public_thumb_path.to_string();
         }
 
-        // Find next and previous ASDFASDF
-
         let rendered_page = ItemTemplate {
             file: File {
                 name,
@@ -159,6 +161,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                 next_thumb_path,
                 prev_thumb_path,
             },
+            compile_time: COMPILE_EPOCH,
         }
         .render_once()
         .unwrap();
@@ -270,6 +273,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
         files,
         directories,
         breadcrumbs,
+        compile_time: COMPILE_EPOCH,
     }
     .render_once()
     .unwrap();

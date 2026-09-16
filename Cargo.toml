@@ -9,6 +9,7 @@ actix-web = "4.15.0"
 anyhow = "1.0.104"
 async-recursion = "1.1.1"
 colog = "1.4.0"
+compile-time = { version = "0.3.7", features = ["time"], default-features = false }
 futures-lite = "2.6.1"
 image = "0.25.10"
 include_dir = "0.7.4"

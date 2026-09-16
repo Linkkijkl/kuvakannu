@@ -621,6 +621,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "compile-time"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93ae90e9d2c5ee878600b1604aa04ded144a0c7e9ec233cd879ae0922d40f0a1"
+dependencies = [
+ "compile-time-macros",
+ "time",
+]
+
+[[package]]
+name = "compile-time-macros"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa04123619670d1d4f8299132b864e7b7a65aedba0dbe2ea40fa8dd0c9e2873b"
+dependencies = [
+ "macro-string",
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+ "semver",
+ "syn 3.0.5",
+ "time",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1635,6 +1660,7 @@ dependencies = [
  "anyhow",
  "async-recursion",
  "colog",
+ "compile-time",
  "futures-lite",
  "image",
  "include_dir",
@@ -1744,6 +1770,17 @@ name = "lru-slab"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
+
+[[package]]
+name = "macro-string"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e7b3a5bbb2f63aaa223a671ea1bd0e7bc16bd30ce387324cf63995deaddbbd2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.5",
+]
 
 [[package]]
 name = "markdown"
@@ -1922,6 +1959,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "num_threads"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -2900,7 +2946,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb87b95ec50ddfa440816d227a17b2ccbdda963a316a727fda0fc4334f7d134"
 dependencies = [
  "deranged",
+ "libc",
  "num-conv",
+ "num_threads",
  "powerfmt",
  "serde_core",
  "time-core",
