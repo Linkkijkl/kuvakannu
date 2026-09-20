@@ -1,4 +1,5 @@
 use actix_web::{HttpResponse, error, get, web};
+use ez_ffmpeg::{FfmpegContext, Input, Output};
 use image::{EncodableLayout, ImageReader, Limits};
 use log::info;
 use std::path::{Path, PathBuf};
@@ -37,14 +38,33 @@ pub async fn thumbnail(path: web::Path<String>) -> Result<HttpResponse, actix_we
             let thumbnail_bytes = generate_thumbnail(&internal_path);
             let thumbnail_bytes = match thumbnail_bytes {
                 Ok(a) => a,
-                Err(_) => return Ok(HttpResponse::TemporaryRedirect().insert_header(("Location", "/static/material/broken-image.svg")).finish()),
+                Err(_) => {
+                    // Could not generate, try using ffmpeg
+                    let ffmpeg_result = generate_thumbnail_ffmpeg(&internal_path, &thumbnail_path).await;
+                    match ffmpeg_result {
+                        Ok(_) => {
+                            let thumbnail_file = File::open(&thumbnail_path)
+                                .await
+                                .expect("Could not load thumbnail from disk that was just saved");
+                                // Return thumbnail file stream
+                            return Ok(HttpResponse::Ok()
+                                .insert_header(("Content-type", "image/webp"))
+                                .streaming(tokio_util::io::ReaderStream::new(thumbnail_file)));
+                        },
+                        Err(_) => {
+                            // Could not generate thumbnail
+                            return Ok(HttpResponse::TemporaryRedirect()
+                                .insert_header(("Location", "/static/material/broken-image.svg"))
+                                .finish());
+                        }
+                    }
+                }
             };
 
             let file_write_result = async {
                 let parent_dir = thumbnail_path
                     .parent()
                     .unwrap_or_else(|| panic!("File path has no parent dir: {:?}", thumbnail_path));
-                println!("{:?}", parent_dir);
                 if !tokio::fs::try_exists(parent_dir).await? {
                     tokio::fs::create_dir_all(parent_dir).await?;
                 }
@@ -122,4 +142,35 @@ fn generate_thumbnail(file_path: &PathBuf) -> Result<Vec<u8>, actix_web::Error> 
         .to_vec();
 
     Ok(thumbnail_bytes)
+}
+
+async fn generate_thumbnail_ffmpeg(file_path: &PathBuf, thumbnail_path: &PathBuf) -> Result<(), actix_web::Error> {
+    const THUMBNAIL_SIZE: u32 = 500;
+    let parent_dir = thumbnail_path
+        .parent()
+        .unwrap_or_else(|| panic!("File path has no parent dir: {:?}", thumbnail_path));
+    if !tokio::fs::try_exists(parent_dir).await? {
+        tokio::fs::create_dir_all(parent_dir).await?;
+    }
+    let file_path = file_path.to_str().unwrap_or_else(|| panic!("File path is not valid utf8: {file_path:?}"));
+    let thumbnail_path = thumbnail_path.to_str().unwrap_or_else(|| panic!("Output path is not valid utf8: {thumbnail_path:?}"));
+    FfmpegContext::builder()
+        .input(
+            Input::from(file_path)
+                .set_start_time_us(5_000_000)
+                .set_video_codec_opt("skip_frame", "nokey"),
+        )
+        .filter_desc(format!("scale='min({THUMBNAIL_SIZE},iw)':-1"))
+        .output(
+            Output::from(thumbnail_path)
+                .set_format("webp")
+                .set_max_video_frames(1),
+        )
+        .build()
+        .map_err(|_| error::ErrorUnprocessableEntity("File type not supported or broken file"))?
+        .start()
+        .map_err(error::ErrorInternalServerError)?
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+    Ok(())
 }

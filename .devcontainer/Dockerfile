@@ -7,11 +7,13 @@ FROM rust:1-${VARIANT}
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive
 
 # Install development tools
-RUN apt-get install git-lfs
+RUN apt-get -y install git-lfs
 RUN rustup component add clippy
 RUN rustup component add rustfmt
 RUN cargo install cargo-watch
 
+# Install runtime libraries
+RUN apt-get -y install libavutil-dev libavformat-dev libavfilter-dev libavdevice-dev libclang-dev
 # Use nightly releases of Rust
 # RUN rustup install nightly
 # RUN rustup default nightly
