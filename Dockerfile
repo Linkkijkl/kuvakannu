@@ -15,7 +15,10 @@ RUN cargo build --release --bin kuvakannu
 
 # Final container
 FROM alpine AS runtime
-RUN apk add --no-cache libgcc ffmpeg
+RUN apk add --no-cache libgcc imagemagick imagemagick-heic \
+    imagemagick-jp2 imagemagick-jxl imagemagick-openexr \
+    imagemagick-pango imagemagick-pdf imagemagick-raw \
+    imagemagick-svg ffmpeg
 WORKDIR /app
 COPY --from=builder /app/kuvakannu/target/release/kuvakannu .
 USER 1000

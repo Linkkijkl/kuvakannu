@@ -4,7 +4,7 @@ use sailfish::TemplateSimple;
 use std::path::{Path, PathBuf};
 use tokio::fs::DirEntry;
 
-use crate::{thumbnail::SUPPORTED_FILE_TYPES, web_path::WebPath};
+use crate::{thumbnail::INTERNAL_CONVERSION_SUPPORTED_FILE_TYPES, web_path::WebPath};
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(page);
@@ -75,7 +75,7 @@ async fn get_first_file_recursive(dir: PathBuf) -> Option<PathBuf> {
                         .last()
                         .unwrap_or_default()
                         .to_lowercase();
-                    if SUPPORTED_FILE_TYPES.contains(&extension.as_str()) {
+                    if INTERNAL_CONVERSION_SUPPORTED_FILE_TYPES.contains(&extension.as_str()) {
                         return Some(entry.path());
                     }
                 }

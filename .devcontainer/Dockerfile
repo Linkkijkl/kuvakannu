@@ -13,7 +13,7 @@ RUN rustup component add rustfmt
 RUN cargo install cargo-watch
 
 # Install runtime libraries
-RUN apt-get -y install ffmpeg
+# RUN apt-get -y install ffmpeg
 # Use nightly releases of Rust
 # RUN rustup install nightly
 # RUN rustup default nightly

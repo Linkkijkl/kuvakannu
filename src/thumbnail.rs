@@ -7,14 +7,17 @@ use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::Semaphore;
 
-pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(thumbnail);
-}
-
-pub const SUPPORTED_FILE_TYPES: [&str; 15] = [
+const MAX_IMAGE_RESOLUTION: u32 = 10_000;
+const THUMBNAIL_SIZE: u32 = 500;
+const THUMBNAIL_QUALITY: f32 = 80.0;
+pub const INTERNAL_CONVERSION_SUPPORTED_FILE_TYPES: [&str; 15] = [
     "jpg", "jpeg", "png", "webp", "bmp", "dds", "exr", "ff", "gif", "hdr", "ico", "pnm", "qoi",
     "tga", "tiff",
 ];
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(thumbnail);
+}
 
 #[get("/thumb/{path:.*}")]
 pub async fn thumbnail(path: web::Path<String>) -> Result<HttpResponse, actix_web::Error> {
@@ -42,7 +45,7 @@ pub async fn thumbnail(path: web::Path<String>) -> Result<HttpResponse, actix_we
                 Err(_) => {
                     // Could not generate, try using ffmpeg
                     let ffmpeg_result =
-                        generate_thumbnail_ffmpeg(&internal_path, &thumbnail_path).await;
+                        generate_thumbnail_magick_ffmpeg(&internal_path, &thumbnail_path).await;
                     match ffmpeg_result {
                         Ok(_) => {
                             let thumbnail_file = File::open(&thumbnail_path)
@@ -96,10 +99,6 @@ pub async fn thumbnail(path: web::Path<String>) -> Result<HttpResponse, actix_we
 }
 
 fn generate_thumbnail(file_path: &PathBuf) -> Result<Vec<u8>, actix_web::Error> {
-    const MAX_IMAGE_RESOLUTION: u32 = 10_000;
-    const THUMBNAIL_SIZE: u32 = 500;
-    const THUMBNAIL_QUALITY: f32 = 80.0;
-
     // Check if file type is supported before attempting decode
     let extension = file_path
         .file_name()
@@ -110,7 +109,7 @@ fn generate_thumbnail(file_path: &PathBuf) -> Result<Vec<u8>, actix_web::Error> 
         .last()
         .unwrap_or_default()
         .to_lowercase();
-    if !SUPPORTED_FILE_TYPES.contains(&extension.as_str()) {
+    if !INTERNAL_CONVERSION_SUPPORTED_FILE_TYPES.contains(&extension.as_str()) {
         return Err(error::ErrorUnprocessableEntity("File type not supported"));
     }
 
@@ -146,16 +145,10 @@ fn generate_thumbnail(file_path: &PathBuf) -> Result<Vec<u8>, actix_web::Error> 
     Ok(thumbnail_bytes)
 }
 
-async fn generate_thumbnail_ffmpeg(
+async fn generate_thumbnail_magick_ffmpeg(
     file_path: &PathBuf,
     thumbnail_path: &PathBuf,
 ) -> Result<(), actix_web::Error> {
-    const THUMBNAIL_SIZE: u32 = 500;
-
-    // Limit the amount of concurrent ffmpeg processes
-    static PROCESS_LIMIT_PERMIT: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(1));
-    let _ = PROCESS_LIMIT_PERMIT.acquire().await.unwrap();
-
     // Generate directories for thumbnail
     let parent_dir = thumbnail_path
         .parent()
@@ -171,27 +164,22 @@ async fn generate_thumbnail_ffmpeg(
         .to_str()
         .unwrap_or_else(|| panic!("Output path is not valid utf8: {thumbnail_path:?}"));
 
-    // Execute ffmpeg
-    let ffmpeg_status = tokio::process::Command::new("ffmpeg")
-        .arg("-autorotate")
-        .arg("-i")
-        .arg(file_path)
-        .arg("-vf")
-        .arg(format!(
-            "scale={THUMBNAIL_SIZE}:{THUMBNAIL_SIZE}:force_original_aspect_ratio=decrease,setsar=1"
-        ))
-        .arg("-map_metadata")
-        .arg("-1")
-        .arg("-vframes")
-        .arg("1")
-        .arg("-f")
-        .arg("webp")
-        .arg("-y")
-        .arg(thumbnail_path)
+    // Limit the amount of concurrent ffmpeg processes
+    static PROCESS_LIMIT_PERMIT: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(1));
+    let _permit = PROCESS_LIMIT_PERMIT.acquire().await.unwrap();
+    
+    // Run Imagemagick
+    let magick_status = tokio::process::Command::new("magick")
+        .arg(format!("{file_path}[0]"))
+        .arg("-define")
+        .arg(format!("webp:quality={THUMBNAIL_QUALITY}"))
+        .arg("-thumbnail")
+        .arg(format!("{THUMBNAIL_SIZE}x{THUMBNAIL_SIZE}>"))
+        .arg(format!("WEBP:{thumbnail_path}"))
         .status()
         .await?;
 
-    if ffmpeg_status.success() {
+    if magick_status.success() {
         Ok(())
     } else {
         Err(error::ErrorNotAcceptable("Error when generating thumbnail"))
