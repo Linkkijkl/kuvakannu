@@ -1,14 +1,14 @@
 use std::time::Duration;
 
 use actix_files::Files;
-use actix_web::{App, HttpServer, middleware};
 use actix_web::dev::Service;
 use actix_web::http::header::{CACHE_CONTROL, HeaderValue};
+use actix_web::{App, HttpServer, middleware};
 
 mod page;
+mod r#static;
 mod thumbnail;
 mod web_path;
-mod r#static;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -36,7 +36,6 @@ async fn main() -> std::io::Result<()> {
                 .configure(thumbnail::config)
                 .configure(r#static::config)
                 .configure(page::config)
-
         })
         .keep_alive(Duration::from_secs(60))
         .client_request_timeout(Duration::from_secs(60))

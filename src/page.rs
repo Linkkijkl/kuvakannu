@@ -6,11 +6,18 @@ use tokio::fs::DirEntry;
 
 use crate::{thumbnail::INTERNAL_CONVERSION_SUPPORTED_FILE_TYPES, web_path::WebPath};
 
+const COMPILE_EPOCH: u64 = compile_time::unix!();
+const VIDEO_FORMATS: [&str; 7] = ["3gp", "m4v", "mov", "mp4", "mpeg", "mpg", "webm"];
+
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(page);
 }
 
-const COMPILE_EPOCH: u64 = compile_time::unix!();
+#[derive(Debug)]
+enum MediaType {
+    Image,
+    Video,
+}
 
 #[derive(Debug)]
 struct File {
@@ -23,6 +30,7 @@ struct File {
     parent_path: String,
     next_thumb_path: String,
     prev_thumb_path: String,
+    media_type: MediaType,
 }
 
 #[derive(Debug)]
@@ -150,6 +158,17 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             next_thumb_path = next_public_thumb_path.to_string();
         }
 
+        let extension = internal_file_path
+            .extension()
+            .and_then(|a| a.to_str())
+            .map(|a| a.to_lowercase())
+            .ok_or_else(|| error::ErrorExpectationFailed("file name does not contain extension"))?;
+        let media_type = if VIDEO_FORMATS.contains(&extension.as_str()) {
+            MediaType::Video
+        } else {
+            MediaType::Image
+        };
+
         let rendered_page = ItemTemplate {
             file: File {
                 name,
@@ -161,6 +180,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
                 parent_path: parent_path.to_string(),
                 next_thumb_path,
                 prev_thumb_path,
+                media_type,
             },
             compile_time: COMPILE_EPOCH,
         }
@@ -250,6 +270,7 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             parent_path: "".to_string(),
             next_thumb_path: "".to_string(),
             prev_thumb_path: "".to_string(),
+            media_type: MediaType::Image,
         };
         files.push(file);
     }

@@ -73,11 +73,24 @@
         src="/<%= file.thumbnail_path %>"
         alt="<%= file.name %> preview"
       />
-      <img
-        class="view"
-        src="/<%= file.public_content_path %>"
-        alt="<%= file.name %>"
-      />
+      <% match file.media_type {
+        MediaType::Image => { %>
+          <img
+            class="view"
+            src="/<%= file.public_content_path %>"
+            alt="<%= file.name %>"
+          />
+        <% },
+        MediaType::Video => { %>
+          <video
+            controls
+            class="view"
+            alt="<%= file.name %>"
+          >
+            <source src="/<%= file.public_content_path %>" />
+          </video>
+        <% },
+        } %>
     </div>
   </body>
 </html>
