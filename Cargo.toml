@@ -10,7 +10,6 @@ anyhow = "1.0.104"
 async-recursion = "1.1.1"
 colog = "1.4.0"
 compile-time = { version = "0.3.7", features = ["time"], default-features = false }
-ez-ffmpeg = { version = "0.19.0", features = ["async"] }
 futures-lite = "2.6.1"
 image = "0.25.10"
 include_dir = "0.7.4"
@@ -18,7 +17,7 @@ log = "0.4.34"
 markdown = "1.0.0"
 mime_guess = "2.0.5"
 sailfish = "0.11.4"
-tokio = { version = "1.53.1", features = ["fs"] }
+tokio = { version = "1.53.1", features = ["fs", "process"] }
 tokio-util = "0.7.19"
 webp = "0.3.1"
 

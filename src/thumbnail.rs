@@ -1,8 +1,6 @@
 use actix_web::{HttpResponse, error, get, web};
-use ez_ffmpeg::{FfmpegContext, Input, Output};
 use image::{EncodableLayout, ImageReader, Limits};
 use log::info;
-use std::os::unix::process;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use tokio::fs::File;
@@ -153,6 +151,12 @@ async fn generate_thumbnail_ffmpeg(
     thumbnail_path: &PathBuf,
 ) -> Result<(), actix_web::Error> {
     const THUMBNAIL_SIZE: u32 = 500;
+
+    // Limit the amount of concurrent ffmpeg processes
+    static PROCESS_LIMIT_PERMIT: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(1));
+    let _ = PROCESS_LIMIT_PERMIT.acquire().await.unwrap();
+
+    // Generate directories for thumbnail
     let parent_dir = thumbnail_path
         .parent()
         .unwrap_or_else(|| panic!("File path has no parent dir: {:?}", thumbnail_path));
@@ -167,24 +171,29 @@ async fn generate_thumbnail_ffmpeg(
         .to_str()
         .unwrap_or_else(|| panic!("Output path is not valid utf8: {thumbnail_path:?}"));
 
-    let ffmpeg = FfmpegContext::builder()
-        .input(Input::from(file_path))
-        .filter_desc(format!("scale='min({THUMBNAIL_SIZE},iw)':-1"))
-        .output(
-            Output::from(thumbnail_path)
-                .set_format("webp")
-                .set_max_video_frames(1),
-        )
-        .build()
-        .map_err(|_| error::ErrorUnprocessableEntity("File type not supported or broken file"))?;
-    
-    // Limit the amount of concurrent ffmpeg processes
-    static PROCESS_LIMIT_PERMIT: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(1));
-    let _ = PROCESS_LIMIT_PERMIT.acquire().await.unwrap();
-    
-    ffmpeg.start()
-        .map_err(error::ErrorInternalServerError)?
-        .await
-        .map_err(error::ErrorInternalServerError)?;
-    Ok(())
+    // Execute ffmpeg
+    let ffmpeg_status = tokio::process::Command::new("ffmpeg")
+        .arg("-autorotate")
+        .arg("-i")
+        .arg(file_path)
+        .arg("-vf")
+        .arg(format!(
+            "scale={THUMBNAIL_SIZE}:{THUMBNAIL_SIZE}:force_original_aspect_ratio=decrease,setsar=1"
+        ))
+        .arg("-map_metadata")
+        .arg("-1")
+        .arg("-vframes")
+        .arg("1")
+        .arg("-f")
+        .arg("webp")
+        .arg("-y")
+        .arg(thumbnail_path)
+        .status()
+        .await?;
+
+    if ffmpeg_status.success() {
+        Ok(())
+    } else {
+        Err(error::ErrorNotAcceptable("Error when generating thumbnail"))
+    }
 }
