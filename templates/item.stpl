@@ -90,6 +90,7 @@
             <source src="/<%= file.public_content_path %>" />
           </video>
         <% },
+        MediaType::Other => {},
         } %>
     </div>
   </body>

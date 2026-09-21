@@ -8,6 +8,7 @@ use crate::{thumbnail::INTERNAL_CONVERSION_SUPPORTED_FILE_TYPES, web_path::WebPa
 
 const COMPILE_EPOCH: u64 = compile_time::unix!();
 const VIDEO_FORMATS: [&str; 7] = ["3gp", "m4v", "mov", "mp4", "mpeg", "mpg", "webm"];
+const IMAGE_FORMATS: [&str; 10] = ["apng", "png", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "webp"];
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(page);
@@ -17,6 +18,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 enum MediaType {
     Image,
     Video,
+    Other,
 }
 
 #[derive(Debug)]
@@ -158,15 +160,19 @@ pub async fn page(path: web::Path<String>) -> Result<HttpResponse, actix_web::Er
             next_thumb_path = next_public_thumb_path.to_string();
         }
 
+        // Get media type from file extension
         let extension = internal_file_path
             .extension()
             .and_then(|a| a.to_str())
             .map(|a| a.to_lowercase())
             .ok_or_else(|| error::ErrorExpectationFailed("file name does not contain extension"))?;
-        let media_type = if VIDEO_FORMATS.contains(&extension.as_str()) {
+        let extension = extension.as_str();
+        let media_type = if IMAGE_FORMATS.contains(&extension) {
+            MediaType::Image
+        } else if VIDEO_FORMATS.contains(&extension) {
             MediaType::Video
         } else {
-            MediaType::Image
+            MediaType::Other
         };
 
         let rendered_page = ItemTemplate {
